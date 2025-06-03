@@ -24,6 +24,7 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
+from google.ai.generativelanguage_v1beta.types import Tool as GenAITool
 from agent.utils import (
     get_citations,
     get_research_topic,
@@ -111,22 +112,25 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         research_topic=state["search_query"],
     )
 
-    # Uses the google genai client as the langchain client doesn't return grounding metadata
-    response = genai_client.models.generate_content(
+    llm = ChatGoogleGenerativeAI(
         model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
+        temperature=0,
+        api_key=os.getenv("GEMINI_API_KEY"),
     )
+
+    response = llm.invoke(
+        formatted_prompt,
+        tools=[GenAITool(google_search={})],
+    )
+
     # resolve the urls to short urls for saving tokens and time
     resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
+        response.response_metadata["grounding_metadata"]["grounding_chunks"],
+        state["id"],
     )
     # Gets the citations and adds them to the generated text
     citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
+    modified_text = insert_citation_markers(response.content, citations)
     sources_gathered = [item for citation in citations for item in citation["segments"]]
 
     return {

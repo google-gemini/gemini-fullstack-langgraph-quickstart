@@ -18,6 +18,7 @@ dependencies = [
     "langgraph-api",
     "fastapi",
     "google-genai",
+    "google-ai-generativelanguage>=0.6.18",
 ]
 
 
