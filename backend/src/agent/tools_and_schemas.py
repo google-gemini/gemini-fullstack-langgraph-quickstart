@@ -21,3 +21,10 @@ class Reflection(BaseModel):
     follow_up_queries: List[str] = Field(
         description="A list of follow-up queries to address the knowledge gap."
     )
+
+
+class ConfirmationQuestion(BaseModel):
+    """Schema for structured output of confirmation questions"""
+    question: str = Field(description="Confirmation question for the user")
+    rationale: str = Field(description="Reason why this question is important")
+    skip_instruction: str = Field(description="Brief instruction on how to skip confirmation, explaining why this question is being asked")
