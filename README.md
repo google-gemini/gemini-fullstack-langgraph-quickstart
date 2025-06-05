@@ -7,6 +7,7 @@ This project demonstrates a fullstack application using a React frontend and a L
 ## Features
 
 - 💬 Fullstack application with a React frontend and LangGraph backend.
+- ląd User-friendly landing page available at `frontend/public/index.html` to get an overview of the quickstart. Open this file in your browser to view it.
 - 🧠 Powered by a LangGraph agent for advanced research and conversational AI.
 - 🔍 Dynamic search query generation using Google Gemini models.
 - 🌐 Integrated web research via Google Search API.
