@@ -1,6 +1,5 @@
 import type React from "react";
 import type { Message } from "@langchain/langgraph-sdk";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Copy, CopyCheck } from "lucide-react";
 import { InputForm } from "@/components/InputForm";
 import { Button } from "@/components/ui/button";
@@ -253,7 +252,7 @@ export function ChatMessagesView({
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-grow" ref={scrollAreaRef}>
+      <div className="flex-1 overflow-y-auto" ref={scrollAreaRef}>
         <div className="p-4 md:p-6 space-y-2 max-w-4xl mx-auto pt-16">
           {messages.map((message, index) => {
             const isLast = index === messages.length - 1;
@@ -309,13 +308,15 @@ export function ChatMessagesView({
               </div>
             )}
         </div>
-      </ScrollArea>
-      <InputForm
-        onSubmit={onSubmit}
-        isLoading={isLoading}
-        onCancel={onCancel}
-        hasHistory={messages.length > 0}
-      />
+      </div>
+      <div className="bg-neutral-800 border-t border-neutral-700">
+        <InputForm
+          onSubmit={onSubmit}
+          isLoading={isLoading}
+          onCancel={onCancel}
+          hasHistory={messages.length > 0}
+        />
+      </div>
     </div>
   );
 }
