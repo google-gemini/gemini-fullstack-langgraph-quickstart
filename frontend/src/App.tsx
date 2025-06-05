@@ -5,6 +5,32 @@ import { ProcessedEvent } from "@/components/ActivityTimeline";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessagesView } from "@/components/ChatMessagesView";
 
+// Define types for the streaming events
+interface GenerateQueryEvent {
+  generate_query?: {
+    query_list?: string[];
+  } | null;
+}
+
+interface WebResearchEvent {
+  web_research?: {
+    sources_gathered?: Array<{ label: string; [key: string]: unknown }>;
+  };
+}
+
+interface ReflectionEvent {
+  reflection?: {
+    is_sufficient: boolean;
+    follow_up_queries?: string[];
+  };
+}
+
+interface FinalizeAnswerEvent {
+  finalize_answer?: Record<string, unknown>;
+}
+
+type StreamEvent = GenerateQueryEvent & WebResearchEvent & ReflectionEvent & FinalizeAnswerEvent;
+
 export default function App() {
   const [processedEventsTimeline, setProcessedEventsTimeline] = useState<
     ProcessedEvent[]
@@ -26,12 +52,12 @@ export default function App() {
       : "http://localhost:8123",
     assistantId: "agent",
     messagesKey: "messages",
-    onFinish: (event: any) => {
+    onFinish: (event: unknown) => {
       console.log(event);
     },
-    onUpdateEvent: (event: any) => {
+    onUpdateEvent: (event: StreamEvent) => {
       let processedEvent: ProcessedEvent | null = null;
-      if (event.generate_query) {
+      if (event.generate_query && event.generate_query.query_list) {
         processedEvent = {
           title: "Generating Search Queries",
           data: event.generate_query.query_list.join(", "),
@@ -40,7 +66,7 @@ export default function App() {
         const sources = event.web_research.sources_gathered || [];
         const numSources = sources.length;
         const uniqueLabels = [
-          ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
+          ...new Set(sources.map((s) => s.label).filter(Boolean)),
         ];
         const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
         processedEvent = {
@@ -54,9 +80,9 @@ export default function App() {
           title: "Reflection",
           data: event.reflection.is_sufficient
             ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
+            : `Need more information, searching for ${event.reflection.follow_up_queries?.join(
                 ", "
-              )}`,
+              ) || "additional queries"}`,
         };
       } else if (event.finalize_answer) {
         processedEvent = {
