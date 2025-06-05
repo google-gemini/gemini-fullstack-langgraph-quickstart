@@ -1,3 +1,12 @@
+[Deutsch](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=de) |
+[Español](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=es) |
+[français](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=fr) |
+[日本語](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=ja) |
+[한국어](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=ko) |
+[Português](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=pt) |
+[Русский](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=ru) |
+[中文](https://www.readme-i18n.com/google-gemini/gemini-fullstack-langgraph-quickstart?lang=zh)
+
 # Gemini Fullstack LangGraph Quickstart
 
 This project demonstrates a fullstack application using a React frontend and a LangGraph-powered backend agent. The agent is designed to perform comprehensive research on a user's query by dynamically generating search terms, querying the web using Google Search, reflecting on the results to identify knowledge gaps, and iteratively refining its search until it can provide a well-supported answer with citations. This application serves as an example of building research-augmented conversational AI using LangGraph and Google's Gemini models.
