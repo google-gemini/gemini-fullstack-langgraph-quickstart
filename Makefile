@@ -1,4 +1,10 @@
-.PHONY: help dev-frontend dev-backend dev
+.PHONY: help setup dev-frontend dev-backend dev
+
+setup:
+	@echo "Installing frontend dependencies..."
+	@cd frontend && npm install
+	@echo "Installing backend dependencies..."
+	@cd backend && uv sync
 
 help:
 	@echo "Available commands:"
@@ -12,9 +18,9 @@ dev-frontend:
 
 dev-backend:
 	@echo "Starting backend development server..."
-	@cd backend && langgraph dev
+	@cd backend && uv run langgraph dev
 
 # Run frontend and backend concurrently
 dev:
 	@echo "Starting both frontend and backend development servers..."
-	@make dev-frontend & make dev-backend 
+	@make dev-frontend & make dev-backend

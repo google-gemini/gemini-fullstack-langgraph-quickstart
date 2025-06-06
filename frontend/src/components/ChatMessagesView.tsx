@@ -74,7 +74,7 @@ const mdComponents = {
     <blockquote
       className={cn(
         "border-l-4 border-neutral-600 pl-4 italic my-3 text-sm",
-        className
+        className,
       )}
       {...props}
     >
@@ -85,7 +85,7 @@ const mdComponents = {
     <code
       className={cn(
         "bg-neutral-900 rounded px-1 py-0.5 font-mono text-xs",
-        className
+        className,
       )}
       {...props}
     >
@@ -96,7 +96,7 @@ const mdComponents = {
     <pre
       className={cn(
         "bg-neutral-900 p-3 rounded-lg overflow-x-auto font-mono text-xs my-3",
-        className
+        className,
       )}
       {...props}
     >
@@ -117,7 +117,7 @@ const mdComponents = {
     <th
       className={cn(
         "border border-neutral-600 px-3 py-2 text-left font-bold",
-        className
+        className,
       )}
       {...props}
     >
@@ -150,9 +150,7 @@ const HumanMessageBubble: React.FC<HumanMessageBubbleProps> = ({
       className={`text-white rounded-3xl break-words min-h-7 bg-neutral-700 max-w-[100%] sm:max-w-[90%] px-4 pt-3 rounded-br-lg`}
     >
       <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
+        {extractTextFromContent(message.content)}
       </ReactMarkdown>
     </div>
   );
@@ -197,20 +195,13 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
         </div>
       )}
       <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
+        {extractTextFromContent(message.content)}
       </ReactMarkdown>
       <Button
         variant="default"
         className="cursor-pointer bg-neutral-700 border-neutral-600 text-neutral-300 self-end"
         onClick={() =>
-          handleCopy(
-            typeof message.content === "string"
-              ? message.content
-              : JSON.stringify(message.content),
-            message.id!
-          )
+          handleCopy(extractTextFromContent(message.content), message.id!)
         }
       >
         {copiedMessageId === message.id ? "Copied" : "Copy"}
@@ -228,6 +219,42 @@ interface ChatMessagesViewProps {
   onCancel: () => void;
   liveActivityEvents: ProcessedEvent[];
   historicalActivities: Record<string, ProcessedEvent[]>;
+}
+
+// Utility function to extract text from structured content
+function extractTextFromContent(content: any): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    // Handle list of content blocks
+    const textParts: string[] = [];
+    for (const item of content) {
+      if (typeof item === "object" && item.type === "text" && item.text) {
+        textParts.push(item.text);
+      } else if (typeof item === "string") {
+        textParts.push(item);
+      } else {
+        textParts.push(String(item));
+      }
+    }
+    return textParts.join("");
+  }
+
+  if (typeof content === "object" && content !== null) {
+    // Handle single content block
+    if (content.type === "text" && content.text) {
+      return content.text;
+    }
+    // Try other common keys
+    if (content.text) return String(content.text);
+    if (content.content) return String(content.content);
+    if (content.message) return String(content.message);
+  }
+
+  // Fallback to string conversion
+  return String(content);
 }
 
 export function ChatMessagesView({

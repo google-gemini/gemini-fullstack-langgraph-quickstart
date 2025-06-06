@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ProcessedEvent } from "@/components/ActivityTimeline";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessagesView } from "@/components/ChatMessagesView";
+import React from "react";
 
 export default function App() {
   const [processedEventsTimeline, setProcessedEventsTimeline] = useState<
@@ -12,6 +13,7 @@ export default function App() {
   const [historicalActivities, setHistoricalActivities] = useState<
     Record<string, ProcessedEvent[]>
   >({});
+  const [finalAnswerMessages, setFinalAnswerMessages] = useState<Message[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const hasFinalizeEventOccurredRef = useRef(false);
 
@@ -55,7 +57,7 @@ export default function App() {
           data: event.reflection.is_sufficient
             ? "Search successful, generating final answer."
             : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
+                ", ",
               )}`,
         };
       } else if (event.finalize_answer) {
@@ -74,16 +76,53 @@ export default function App() {
     },
   });
 
+  // Filter messages to only show human messages and final AI answers
+  const displayMessages = React.useMemo(() => {
+    if (!thread.messages) return [];
+
+    const filtered: Message[] = [];
+
+    // Group messages by conversation pairs (human -> ai responses)
+    for (let i = 0; i < thread.messages.length; i++) {
+      const message = thread.messages[i];
+
+      if (message.type === "human") {
+        filtered.push(message);
+      } else if (message.type === "ai") {
+        // For AI messages, only keep the last one for each conversation
+        // Find the last AI message index
+        let lastAiIndex = -1;
+        for (let j = filtered.length - 1; j >= 0; j--) {
+          if (filtered[j].type === "ai") {
+            lastAiIndex = j;
+            break;
+          }
+        }
+
+        if (lastAiIndex >= 0 && !thread.isLoading) {
+          // Replace with the latest (most complete) AI message
+          filtered[lastAiIndex] = message;
+        } else if (lastAiIndex === -1) {
+          // First AI message in this conversation
+          filtered.push(message);
+        }
+        // If still loading, don't add intermediate AI messages
+      }
+    }
+
+    return filtered;
+  }, [thread.messages, thread.isLoading]);
+
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollViewport = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
+        "[data-radix-scroll-area-viewport]",
       );
       if (scrollViewport) {
         scrollViewport.scrollTop = scrollViewport.scrollHeight;
       }
     }
-  }, [thread.messages]);
+  }, [displayMessages]);
 
   useEffect(() => {
     if (
@@ -144,7 +183,7 @@ export default function App() {
         reasoning_model: model,
       });
     },
-    [thread]
+    [thread],
   );
 
   const handleCancel = useCallback(() => {
@@ -157,10 +196,10 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full">
         <div
           className={`flex-1 overflow-y-auto ${
-            thread.messages.length === 0 ? "flex" : ""
+            displayMessages.length === 0 ? "flex" : ""
           }`}
         >
-          {thread.messages.length === 0 ? (
+          {displayMessages.length === 0 ? (
             <WelcomeScreen
               handleSubmit={handleSubmit}
               isLoading={thread.isLoading}
@@ -168,7 +207,7 @@ export default function App() {
             />
           ) : (
             <ChatMessagesView
-              messages={thread.messages}
+              messages={displayMessages}
               isLoading={thread.isLoading}
               scrollAreaRef={scrollAreaRef}
               onSubmit={handleSubmit}

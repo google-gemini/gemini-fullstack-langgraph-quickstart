@@ -2,20 +2,64 @@ from typing import Any, Dict, List
 from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
 
 
+def extract_text_from_content(content: Any) -> str:
+    """
+    Extract plain text from ChatBedrockConverse response content.
+
+    ChatBedrockConverse returns content in the format:
+    [{"type": "text", "text": "actual content"}] or similar structures
+
+    Args:
+        content: The content from a ChatBedrockConverse response
+
+    Returns:
+        str: The extracted plain text
+    """
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        # Handle list of content blocks
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text_parts.append(item.get("text", ""))
+            elif isinstance(item, str):
+                text_parts.append(item)
+            else:
+                # Fallback to string conversion
+                text_parts.append(str(item))
+        return "".join(text_parts)
+
+    if isinstance(content, dict):
+        # Handle single content block
+        if content.get("type") == "text":
+            return content.get("text", "")
+        # Try other common keys
+        for key in ["text", "content", "message"]:
+            if key in content:
+                return str(content[key])
+
+    # Fallback to string conversion
+    return str(content)
+
+
 def get_research_topic(messages: List[AnyMessage]) -> str:
     """
     Get the research topic from the messages.
     """
     # check if request has a history and combine the messages into a single string
     if len(messages) == 1:
-        research_topic = messages[-1].content
+        research_topic = extract_text_from_content(messages[-1].content)
     else:
         research_topic = ""
         for message in messages:
             if isinstance(message, HumanMessage):
-                research_topic += f"User: {message.content}\n"
+                content = extract_text_from_content(message.content)
+                research_topic += f"User: {content}\n"
             elif isinstance(message, AIMessage):
-                research_topic += f"Assistant: {message.content}\n"
+                content = extract_text_from_content(message.content)
+                research_topic += f"Assistant: {content}\n"
     return research_topic
 
 

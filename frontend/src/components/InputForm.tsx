@@ -36,7 +36,7 @@ export const InputForm: React.FC<InputFormProps> = ({
   };
 
   const handleInternalKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();

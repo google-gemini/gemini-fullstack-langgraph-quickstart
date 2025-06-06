@@ -1,25 +1,25 @@
-# Gemini Fullstack LangGraph Quickstart
+# AWS Bedrock Fullstack LangGraph Quickstart
 
-This project demonstrates a fullstack application using a React frontend and a LangGraph-powered backend agent. The agent is designed to perform comprehensive research on a user's query by dynamically generating search terms, querying the web using Google Search, reflecting on the results to identify knowledge gaps, and iteratively refining its search until it can provide a well-supported answer with citations. This application serves as an example of building research-augmented conversational AI using LangGraph and Google's Gemini models.
+This project demonstrates a fullstack application using a React frontend and a LangGraph-powered backend agent. The agent leverages AWS Bedrock foundation models to perform comprehensive research on user queries, dynamically generating search terms, performing web searches, and iteratively refining its research until providing well-supported answers with citations. This application serves as an example of building research-augmented conversational AI using LangGraph and AWS Bedrock.
 
-![Gemini Fullstack LangGraph](./app.png)
+![AWS Bedrock Fullstack LangGraph](./app.png)
 
 ## Features
 
-- 💬 Fullstack application with a React frontend and LangGraph backend.
-- 🧠 Powered by a LangGraph agent for advanced research and conversational AI.
-- 🔍 Dynamic search query generation using Google Gemini models.
-- 🌐 Integrated web research via Google Search API.
-- 🤔 Reflective reasoning to identify knowledge gaps and refine searches.
-- 📄 Generates answers with citations from gathered sources.
-- 🔄 Hot-reloading for both frontend and backend development during development.
+- 💬 Fullstack application with a React frontend and LangGraph backend
+- 🧠 Powered by AWS Bedrock foundation models for advanced conversational AI
+- 🔍 Dynamic search query generation using AWS Bedrock Claude
+- 🌐 Integrated web research capabilities powered by AWS
+- 🤔 Reflective reasoning using AWS Bedrock models to identify knowledge gaps
+- 📄 Answer synthesis with citations using AWS Bedrock
+- 🔄 Hot-reloading for both frontend and backend development
 
 ## Project Structure
 
 The project is divided into two main directories:
 
--   `frontend/`: Contains the React application built with Vite.
--   `backend/`: Contains the LangGraph/FastAPI application, including the research agent logic.
+-   `frontend/`: Contains the React application built with Vite
+-   `backend/`: Contains the LangGraph/FastAPI application leveraging AWS Bedrock
 
 ## Getting Started: Development and Local Testing
 
@@ -29,25 +29,21 @@ Follow these steps to get the application running locally for development and te
 
 -   Node.js and npm (or yarn/pnpm)
 -   Python 3.8+
--   **`GEMINI_API_KEY`**: The backend agent requires a Google Gemini API key.
-    1.  Navigate to the `backend/` directory.
-    2.  Create a file named `.env` by copying the `backend/.env.example` file.
-    3.  Open the `.env` file and add your Gemini API key: `GEMINI_API_KEY="YOUR_ACTUAL_API_KEY"`
+-   uv (https://docs.astral.sh/uv/)
+-   **AWS Credentials:**
+    1.  Navigate to the `backend/` directory
+    2.  Create a file named `.env` by copying the `backend/.env.example` file
+    3.  Add your AWS credentials:
+        ```
+        AWS_ACCESS_KEY_ID=your_access_key
+        AWS_SECRET_ACCESS_KEY=your_secret_key
+        AWS_REGION=your_region
+        ```
 
 **2. Install Dependencies:**
 
-**Backend:**
-
 ```bash
-cd backend
-pip install .
-```
-
-**Frontend:**
-
-```bash
-cd frontend
-npm install
+make setup
 ```
 
 **3. Run Development Servers:**
@@ -57,21 +53,21 @@ npm install
 ```bash
 make dev
 ```
-This will run the backend and frontend development servers.    Open your browser and navigate to the frontend development server URL (e.g., `http://localhost:5173/app`).
+This will run the backend and frontend development servers. Open your browser and navigate to the frontend development server URL (e.g., `http://localhost:5173/app`).
 
 _Alternatively, you can run the backend and frontend development servers separately. For the backend, open a terminal in the `backend/` directory and run `langgraph dev`. The backend API will be available at `http://127.0.0.1:2024`. It will also open a browser window to the LangGraph UI. For the frontend, open a terminal in the `frontend/` directory and run `npm run dev`. The frontend will be available at `http://localhost:5173`._
 
 ## How the Backend Agent Works (High-Level)
 
-The core of the backend is a LangGraph agent defined in `backend/src/agent/graph.py`. It follows these steps:
+The core of the backend is a LangGraph agent defined in `backend/src/agent/graph.py`. It leverages AWS Bedrock foundation models at each step:
 
 ![Agent Flow](./agent.png)
 
-1.  **Generate Initial Queries:** Based on your input, it generates a set of initial search queries using a Gemini model.
-2.  **Web Research:** For each query, it uses the Gemini model with the Google Search API to find relevant web pages.
-3.  **Reflection & Knowledge Gap Analysis:** The agent analyzes the search results to determine if the information is sufficient or if there are knowledge gaps. It uses a Gemini model for this reflection process.
-4.  **Iterative Refinement:** If gaps are found or the information is insufficient, it generates follow-up queries and repeats the web research and reflection steps (up to a configured maximum number of loops).
-5.  **Finalize Answer:** Once the research is deemed sufficient, the agent synthesizes the gathered information into a coherent answer, including citations from the web sources, using a Gemini model.
+1.  **Generate Initial Queries:** Uses AWS Bedrock Claude to analyze the input and generate targeted search queries
+2.  **Web Research:** Performs web searches using AWS capabilities to find relevant information
+3.  **Reflection & Knowledge Gap Analysis:** Uses AWS Bedrock Claude to analyze search results and identify knowledge gaps
+4.  **Iterative Refinement:** Generates follow-up queries using AWS Bedrock Claude and repeats research if needed
+5.  **Answer Synthesis:** Uses AWS Bedrock Claude to create a comprehensive answer with citations
 
 ## Deployment
 
@@ -85,24 +81,24 @@ _Note: If you are not running the docker-compose.yml example or exposing the bac
 
    Run the following command from the **project root directory**:
    ```bash
-   docker build -t gemini-fullstack-langgraph -f Dockerfile .
+   docker build -t aws-bedrock-fullstack-langgraph -f Dockerfile .
    ```
 **2. Run the Production Server:**
 
    ```bash
-   GEMINI_API_KEY=<your_gemini_api_key> LANGSMITH_API_KEY=<your_langsmith_api_key> docker-compose up
+   AWS_ACCESS_KEY_ID=your_access_key AWS_SECRET_ACCESS_KEY=your_secret_key AWS_REGION=your_region LANGSMITH_API_KEY=your_langsmith_api_key docker-compose up
    ```
 
 Open your browser and navigate to `http://localhost:8123/app/` to see the application. The API will be available at `http://localhost:8123`.
 
 ## Technologies Used
 
-- [React](https://reactjs.org/) (with [Vite](https://vitejs.dev/)) - For the frontend user interface.
-- [Tailwind CSS](https://tailwindcss.com/) - For styling.
-- [Shadcn UI](https://ui.shadcn.com/) - For components.
-- [LangGraph](https://github.com/langchain-ai/langgraph) - For building the backend research agent.
-- [Google Gemini](https://ai.google.dev/models/gemini) - LLM for query generation, reflection, and answer synthesis.
+- [React](https://reactjs.org/) (with [Vite](https://vitejs.dev/)) - For the frontend user interface
+- [Tailwind CSS](https://tailwindcss.com/) - For styling
+- [Shadcn UI](https://ui.shadcn.com/) - For components
+- [LangGraph](https://github.com/langchain-ai/langgraph) - For building the backend research agent
+- [AWS Bedrock](https://aws.amazon.com/bedrock/) - Foundation models for query generation, reflection, and answer synthesis
 
 ## License
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details. 
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
