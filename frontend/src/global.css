@@ -42,27 +42,35 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
+  --radius: 0.5rem; /* Slightly reduced radius for a sharper look */
+  --background: oklch(1 0 0); /* White */
+  --foreground: oklch(0.145 0.02 240); /* Dark Slate Blue/Gray for text */
+  --card: oklch(0.98 0.01 240); /* Very Light Gray for cards, slightly off-white */
+  --card-foreground: oklch(0.145 0.02 240); /* Dark Slate Blue/Gray for text on cards */
+  --popover: oklch(1 0 0); /* White for popovers */
+  --popover-foreground: oklch(0.145 0.02 240); /* Dark text for popovers */
+
+  /* Enterprise Blue Accent */
+  --primary: oklch(0.51 0.18 255); /* Professional Blue */
+  --primary-foreground: oklch(1 0 0); /* White text on primary elements */
+
+  --secondary: oklch(0.94 0.015 240); /* Light Gray for secondary elements */
+  --secondary-foreground: oklch(0.25 0.03 240); /* Darker Gray text on secondary */
+
+  --muted: oklch(0.95 0.01 240); /* Lighter Gray for muted text/backgrounds */
+  --muted-foreground: oklch(0.45 0.02 240); /* Medium Gray for muted text */
+
+  --accent: oklch(0.92 0.02 240); /* Slightly darker accent gray */
+  --accent-foreground: oklch(0.145 0.02 240); /* Dark text on accent */
+
+  --destructive: oklch(0.577 0.245 27.325); /* Standard destructive red */
+
+  --border: oklch(0.88 0.015 240); /* Softer Gray for borders */
+  --input: oklch(0.88 0.015 240); /* Softer Gray for input backgrounds/borders */
+  --ring: oklch(0.51 0.18 255 / 0.7); /* Primary blue for focus rings, slightly transparent */
+
+  --chart-1: oklch(0.51 0.18 255); /* Primary Blue */
+  --chart-2: oklch(0.6 0.18 220); /* Lighter Blue */
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);

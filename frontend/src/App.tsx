@@ -20,6 +20,9 @@ export default function App() {
     initial_search_query_count: number;
     max_research_loops: number;
     reasoning_model: string;
+    llm_provider?: string;
+    langsmith_enabled?: boolean;
+    search_mode?: string; // Added search_mode
   }>({
     apiUrl: import.meta.env.DEV
       ? "http://localhost:2024"
@@ -103,15 +106,11 @@ export default function App() {
   }, [thread.messages, thread.isLoading, processedEventsTimeline]);
 
   const handleSubmit = useCallback(
-    (submittedInputValue: string, effort: string, model: string) => {
+    (submittedInputValue: string, effort: string, model: string, provider: string, langsmithEnabled: boolean, searchMode: string) => { // Added searchMode
       if (!submittedInputValue.trim()) return;
       setProcessedEventsTimeline([]);
       hasFinalizeEventOccurredRef.current = false;
 
-      // convert effort to, initial_search_query_count and max_research_loops
-      // low means max 1 loop and 1 query
-      // medium means max 3 loops and 3 queries
-      // high means max 10 loops and 5 queries
       let initial_search_query_count = 0;
       let max_research_loops = 0;
       switch (effort) {
@@ -142,6 +141,9 @@ export default function App() {
         initial_search_query_count: initial_search_query_count,
         max_research_loops: max_research_loops,
         reasoning_model: model,
+        llm_provider: provider,
+        langsmith_enabled: langsmithEnabled,
+        search_mode: searchMode,
       });
     },
     [thread]
@@ -153,7 +155,8 @@ export default function App() {
   }, [thread]);
 
   return (
-    <div className="flex h-screen bg-neutral-800 text-neutral-100 font-sans antialiased">
+    // Updated root styles for light theme
+    <div className="flex h-screen bg-gray-100 text-neutral-900 font-sans antialiased">
       <main className="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full">
         <div
           className={`flex-1 overflow-y-auto ${

@@ -24,35 +24,123 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI # For OpenRouter and potentially DeepSeek if OpenAI compatible
+from langchain_core.language_models.chat_models import BaseChatModel # For type hinting
 from agent.utils import (
     get_citations,
     get_research_topic,
     insert_citation_markers,
     resolve_urls,
 )
+from agent.tools_and_schemas import LocalSearchTool # Import the new tool
 
 load_dotenv()
 
 if os.getenv("GEMINI_API_KEY") is None:
     raise ValueError("GEMINI_API_KEY is not set")
 
+# --- LangSmith Tracing Configuration ---
+# Instantiate Configuration to read environment variables for global settings like LangSmith.
+# Note: Configuration.from_runnable_config() is for node-specific configs within the graph.
+global_config = Configuration()
+
+if global_config.langsmith_enabled:
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    # LANGCHAIN_API_KEY, LANGCHAIN_ENDPOINT, LANGCHAIN_PROJECT should be set by the user in their environment.
+    # We can add a check here if LANGCHAIN_API_KEY is not set and log a warning.
+    if not os.getenv("LANGCHAIN_API_KEY"):
+        print("Warning: LangSmith is enabled, but LANGCHAIN_API_KEY is not set. Tracing will likely fail.")
+else:
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
+    # Explicitly unset other LangSmith variables to prevent accidental tracing
+    langsmith_vars_to_unset = ["LANGCHAIN_API_KEY", "LANGCHAIN_ENDPOINT", "LANGCHAIN_PROJECT"]
+    for var in langsmith_vars_to_unset:
+        if var in os.environ:
+            del os.environ[var]
+
 # Used for Google Search API
 genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+# Instantiate LocalSearchTool
+local_search_tool = LocalSearchTool()
+
+# Helper function to get LLM client based on configuration
+def _get_llm_client(configurable: Configuration, task_model_name: str, temperature: float = 0.0, max_retries: int = 2) -> BaseChatModel:
+    """
+    Instantiates and returns an LLM client based on the provider specified in the configuration.
+
+    Args:
+        configurable: The Configuration object.
+        task_model_name: The specific model name for the task (e.g., query_generator_model).
+        temperature: The temperature for the LLM.
+        max_retries: The maximum number of retries for API calls.
+
+    Returns:
+        An instance of a Langchain chat model.
+
+    Raises:
+        ValueError: If the LLM provider is unsupported or required keys/names are missing.
+    """
+    provider = configurable.llm_provider.lower()
+    api_key = configurable.llm_api_key
+
+    if provider == "gemini":
+        gemini_api_key = api_key or os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY must be set for Gemini provider, either via LLM_API_KEY or GEMINI_API_KEY environment variable.")
+        return ChatGoogleGenerativeAI(
+            model=task_model_name,
+            temperature=temperature,
+            max_retries=max_retries,
+            api_key=gemini_api_key,
+        )
+    elif provider == "openrouter":
+        if not api_key:
+            raise ValueError("LLM_API_KEY must be set for OpenRouter provider.")
+        if not configurable.openrouter_model_name:
+            # Using task_model_name as the full OpenRouter model string if openrouter_model_name is not set
+            # This assumes task_model_name (e.g. query_generator_model) would contain "anthropic/claude-3-haiku"
+            model_to_use = task_model_name
+        else:
+            # If openrouter_model_name is set, it's the primary model identifier.
+            # Task-specific models might be appended or it might be a single model for all tasks.
+            # For now, let's assume openrouter_model_name is the one to use if provided,
+            # otherwise, the specific task_model_name acts as the full OpenRouter model string.
+            model_to_use = configurable.openrouter_model_name
+
+        return ChatOpenAI(
+            model_name=model_to_use,
+            openai_api_key=api_key,
+            openai_api_base="https://openrouter.ai/api/v1",
+            temperature=temperature,
+            max_retries=max_retries,
+        )
+    elif provider == "deepseek":
+        if not api_key:
+            raise ValueError("LLM_API_KEY must be set for DeepSeek provider.")
+        # Assuming DeepSeek is OpenAI API compatible
+        # Users should set configurable.deepseek_model_name to "deepseek-chat" or "deepseek-coder" etc.
+        model_to_use = configurable.deepseek_model_name or task_model_name
+        if not model_to_use:
+             raise ValueError("deepseek_model_name or a task-specific model must be provided for DeepSeek.")
+
+        return ChatOpenAI(
+            model_name=model_to_use,
+            openai_api_key=api_key,
+            openai_api_base="https://api.deepseek.com/v1", # Common DeepSeek API base
+            temperature=temperature,
+            max_retries=max_retries,
+        )
+    # Add other providers here as elif blocks
+    # elif provider == "another_provider":
+    #     return AnotherProviderChatModel(...)
+    else:
+        raise ValueError(f"Unsupported LLM provider: {configurable.llm_provider}")
 
 
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates a search queries based on the User's question.
-
-    Uses Gemini 2.0 Flash to create an optimized search query for web research based on
-    the User's question.
-
-    Args:
-        state: Current graph state containing the User's question
-        config: Configuration for the runnable, including LLM provider settings
-
-    Returns:
-        Dictionary with state update, including search_query key containing the generated query
     """
     configurable = Configuration.from_runnable_config(config)
 
@@ -60,13 +148,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
-    # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=configurable.query_generator_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    llm = _get_llm_client(configurable, configurable.query_generator_model, temperature=1.0)
     structured_llm = llm.with_structured_output(SearchQueryList)
 
     # Format the prompt
@@ -91,48 +173,137 @@ def continue_to_web_research(state: QueryGenerationState):
         for idx, search_query in enumerate(state["query_list"])
     ]
 
+# --- Helper functions for web_research node ---
 
-def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
-    """LangGraph node that performs web research using the native Google Search API tool.
-
-    Executes a web search using the native Google Search API tool in combination with Gemini 2.0 Flash.
-
-    Args:
-        state: Current graph state containing the search query and research loop count
-        config: Configuration for the runnable, including search API settings
-
-    Returns:
-        Dictionary with state update, including sources_gathered, research_loop_count, and web_research_results
-    """
-    # Configure
-    configurable = Configuration.from_runnable_config(config)
+def _perform_google_search(state: WebSearchState, configurable: Configuration, current_genai_client: Client) -> tuple[list, list]:
+    """Performs Google search and returns sources and results."""
     formatted_prompt = web_searcher_instructions.format(
         current_date=get_current_date(),
         research_topic=state["search_query"],
     )
+    try:
+        response = current_genai_client.models.generate_content(
+            model=configurable.query_generator_model, # This model is for the Google Search "agent"
+            contents=formatted_prompt,
+            config={
+                "tools": [{"google_search": {}}], # Native Google Search tool
+                "temperature": 0,
+            },
+        )
+        if not response.candidates or not response.candidates[0].grounding_metadata:
+            print(f"Google Search for '{state['search_query']}' returned no results or grounding metadata.")
+            return [], []
 
-    # Uses the google genai client as the langchain client doesn't return grounding metadata
-    response = genai_client.models.generate_content(
-        model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
-    )
-    # resolve the urls to short urls for saving tokens and time
-    resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
-    )
-    # Gets the citations and adds them to the generated text
-    citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
-    sources_gathered = [item for citation in citations for item in citation["segments"]]
+        resolved_urls = resolve_urls(
+            response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
+        )
+        citations = get_citations(response, resolved_urls)
+        modified_text = insert_citation_markers(response.text, citations)
+        sources = [item for citation_group in citations for item in citation_group["segments"]]
+        return sources, [modified_text]
+    except Exception as e:
+        print(f"Error during Google Search for query '{state['search_query']}': {e}")
+        return [], []
+
+
+def _perform_local_search(state: WebSearchState, configurable: Configuration, tool: LocalSearchTool) -> tuple[list, list]:
+    """Performs local search and returns sources and results."""
+    if not configurable.enable_local_search or not configurable.local_search_domains:
+        return [], []
+
+    search_query = state["search_query"]
+    print(f"Performing local search for: {search_query} in domains: {configurable.local_search_domains}")
+    try:
+        local_results = tool._run(query=search_query, local_domains=configurable.local_search_domains)
+
+        sources: list = []
+        research_texts: list = []
+
+        for idx, res in enumerate(local_results.results):
+            source_id = f"local_{state['id']}_{idx}" # Create a unique enough ID
+            source_dict = {
+                "id": source_id,
+                "value": res.url,
+                "short_url": res.url, # For local, short_url is same as full url
+                "title": res.title,
+                "source_type": "local",
+                 # Adapt snippet to fit the 'segments' structure if needed by downstream tasks,
+                 # or ensure downstream tasks can handle this simpler structure.
+                 # For now, keeping it simpler for finalize_answer compatibility:
+                "segments": [{'segment_id': '0', 'text': res.snippet}]
+            }
+            sources.append(source_dict)
+            research_texts.append(f"[LOCAL] {res.title}: {res.snippet} (Source: {res.url})")
+
+        return sources, research_texts
+    except Exception as e:
+        print(f"Error during local search for query '{search_query}': {e}")
+        return [], []
+
+# --- End of helper functions ---
+
+
+def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
+    """
+    LangGraph node that performs web research based on the search_mode configuration.
+    It can perform Google search, local network search, or a combination of both.
+    """
+    configurable = Configuration.from_runnable_config(config)
+    search_query = state["search_query"] # Each invocation of this node gets one query.
+
+    all_sources_gathered: list = []
+    all_web_research_results: list = []
+
+    search_mode = configurable.search_mode.lower()
+
+    print(f"Web research for '{search_query}': Mode - {search_mode}, Local Search Enabled: {configurable.enable_local_search}")
+
+    if search_mode == "internet_only":
+        gs_sources, gs_results = _perform_google_search(state, configurable, genai_client)
+        all_sources_gathered.extend(gs_sources)
+        all_web_research_results.extend(gs_results)
+
+    elif search_mode == "local_only":
+        if configurable.enable_local_search and configurable.local_search_domains:
+            ls_sources, ls_results = _perform_local_search(state, configurable, local_search_tool)
+            all_sources_gathered.extend(ls_sources)
+            all_web_research_results.extend(ls_results)
+        else:
+            print(f"Local search only mode, but local search is not enabled or no domains configured for query: {search_query}")
+            all_web_research_results.append(f"No local results found for '{search_query}' as local search is not configured.")
+
+
+    elif search_mode == "internet_then_local":
+        gs_sources, gs_results = _perform_google_search(state, configurable, genai_client)
+        all_sources_gathered.extend(gs_sources)
+        all_web_research_results.extend(gs_results)
+        if configurable.enable_local_search and configurable.local_search_domains:
+            ls_sources, ls_results = _perform_local_search(state, configurable, local_search_tool)
+            all_sources_gathered.extend(ls_sources)
+            all_web_research_results.extend(ls_results)
+
+    elif search_mode == "local_then_internet":
+        if configurable.enable_local_search and configurable.local_search_domains:
+            ls_sources, ls_results = _perform_local_search(state, configurable, local_search_tool)
+            all_sources_gathered.extend(ls_sources)
+            all_web_research_results.extend(ls_results)
+        gs_sources, gs_results = _perform_google_search(state, configurable, genai_client)
+        all_sources_gathered.extend(gs_sources)
+        all_web_research_results.extend(gs_results)
+
+    else: # Default to internet_only if mode is unknown
+        print(f"Unknown search mode '{search_mode}', defaulting to internet_only for query: {search_query}")
+        gs_sources, gs_results = _perform_google_search(state, configurable, genai_client)
+        all_sources_gathered.extend(gs_sources)
+        all_web_research_results.extend(gs_results)
+
+    if not all_web_research_results: # Ensure there's always some text result
+        all_web_research_results.append(f"No results found for query: '{search_query}' in mode '{search_mode}'.")
 
     return {
-        "sources_gathered": sources_gathered,
-        "search_query": [state["search_query"]],
-        "web_research_result": [modified_text],
+        "sources_gathered": all_sources_gathered,
+        "search_query": [search_query], # Keep as list to match OverallState type
+        "web_research_result": all_web_research_results,
     }
 
 
@@ -163,12 +334,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
     # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    llm = _get_llm_client(configurable, configurable.reflection_model, temperature=1.0)
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
     return {
@@ -231,7 +397,8 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
     configurable = Configuration.from_runnable_config(config)
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    # The 'reasoning_model' from state is deprecated by specific model fields in Configuration
+    # We now use configurable.answer_model for this node.
 
     # Format the prompt
     current_date = get_current_date()
@@ -241,13 +408,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         summaries="\n---\n\n".join(state["web_research_result"]),
     )
 
-    # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    llm = _get_llm_client(configurable, configurable.answer_model, temperature=0.0)
     result = llm.invoke(formatted_prompt)
 
     # Replace the short urls with the original urls and add all used urls to the sources_gathered

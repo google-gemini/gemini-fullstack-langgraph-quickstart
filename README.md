@@ -8,11 +8,19 @@ This project demonstrates a fullstack application using a React frontend and a L
 
 - 💬 Fullstack application with a React frontend and LangGraph backend.
 - 🧠 Powered by a LangGraph agent for advanced research and conversational AI.
-- 🔍 Dynamic search query generation using Google Gemini models.
+- 💡 **Multi-LLM Support:** Flexibility to use different LLM providers (Gemini, OpenRouter, DeepSeek).
+- 🔍 Dynamic search query generation using the configured LLM.
 - 🌐 Integrated web research via Google Search API.
+- 🏠 **Local Network Search:** Optional capability to search within configured local domains.
+- 🔄 **Flexible Search Modes:** Control whether to search internet, local network, or both, and in which order.
 - 🤔 Reflective reasoning to identify knowledge gaps and refine searches.
 - 📄 Generates answers with citations from gathered sources.
+- 🎨 **Updated UI Theme:** Modern, light theme for improved readability and a professional look.
+- 🛠️ **Configurable Tracing:** LangSmith tracing can be enabled/disabled.
 - 🔄 Hot-reloading for both frontend and backend development during development.
+
+### Upcoming Features
+- Dedicated "Finance" and "HR" sections for specialized research tasks.
 
 ## Project Structure
 
@@ -29,10 +37,7 @@ Follow these steps to get the application running locally for development and te
 
 -   Node.js and npm (or yarn/pnpm)
 -   Python 3.8+
--   **`GEMINI_API_KEY`**: The backend agent requires a Google Gemini API key.
-    1.  Navigate to the `backend/` directory.
-    2.  Create a file named `.env` by copying the `backend/.env.example` file.
-    3.  Open the `.env` file and add your Gemini API key: `GEMINI_API_KEY="YOUR_ACTUAL_API_KEY"`
+-   **API Keys & Configuration:** The backend agent requires API keys depending on the chosen LLM provider and other features. See the "Configuration" section below for details on setting up your `.env` file in the `backend/` directory.
 
 **2. Install Dependencies:**
 
@@ -42,6 +47,11 @@ Follow these steps to get the application running locally for development and te
 cd backend
 pip install .
 ```
+*Note: If you plan to use the Local Network Search feature, ensure you install its dependencies:*
+```bash
+pip install ".[local_search]"
+```
+*(Or `pip install requests beautifulsoup4` if you manage dependencies manually)*
 
 **Frontend:**
 
@@ -57,9 +67,60 @@ npm install
 ```bash
 make dev
 ```
-This will run the backend and frontend development servers.    Open your browser and navigate to the frontend development server URL (e.g., `http://localhost:5173/app`).
+This will run the backend and frontend development servers. Open your browser and navigate to the frontend development server URL (e.g., `http://localhost:5173/app`).
 
 _Alternatively, you can run the backend and frontend development servers separately. For the backend, open a terminal in the `backend/` directory and run `langgraph dev`. The backend API will be available at `http://127.0.0.1:2024`. It will also open a browser window to the LangGraph UI. For the frontend, open a terminal in the `frontend/` directory and run `npm run dev`. The frontend will be available at `http://localhost:5173`._
+
+## Configuration
+
+Create a `.env` file in the `backend/` directory by copying `backend/.env.example`. Below are the available environment variables:
+
+### Core Agent & LLM Configuration
+-   `GEMINI_API_KEY`: Your Google Gemini API key. Required if using "gemini" as the LLM provider for any task or for Google Search functionality.
+-   `LLM_PROVIDER`: Specifies the primary LLM provider for core agent tasks (query generation, reflection, answer synthesis).
+    -   Options: `"gemini"`, `"openrouter"`, `"deepseek"`.
+    -   Default: `"gemini"`.
+-   `LLM_API_KEY`: The API key for the selected `LLM_PROVIDER`.
+    -   Example: If `LLM_PROVIDER="openrouter"`, this should be your OpenRouter API key.
+-   `OPENROUTER_MODEL_NAME`: Specify the full model string if using OpenRouter (e.g., `"anthropic/claude-3-haiku"`). This can be used by the agent if specific task models are not set.
+-   `DEEPSEEK_MODEL_NAME`: Specify the model name if using DeepSeek (e.g., `"deepseek-chat"`). This can be used by the agent if specific task models are not set.
+-   `QUERY_GENERATOR_MODEL`: Model used for generating search queries. Interpreted based on `LLM_PROVIDER`.
+    -   Default for Gemini: `"gemini-1.5-flash"`
+-   `REFLECTION_MODEL`: Model used for reflection and knowledge gap analysis. Interpreted based on `LLM_PROVIDER`.
+    -   Default for Gemini: `"gemini-1.5-flash"`
+-   `ANSWER_MODEL`: Model used for synthesizing the final answer. Interpreted based on `LLM_PROVIDER`.
+    -   Default for Gemini: `"gemini-1.5-pro"`
+-   `NUMBER_OF_INITIAL_QUERIES`: Number of initial search queries to generate. Default: `3`.
+-   `MAX_RESEARCH_LOOPS`: Maximum number of research refinement loops. Default: `2`.
+
+### LangSmith Tracing
+-   `LANGSMITH_ENABLED`: Master switch to enable (`true`) or disable (`false`) LangSmith tracing for the backend. Default: `true`.
+    -   If `true`, various LangSmith environment variables below should also be set.
+    -   If `false`, tracing is globally disabled for the application process, and the UI toggle cannot override this.
+-   `LANGCHAIN_API_KEY`: Your LangSmith API key. Required if `LANGSMITH_ENABLED` is true.
+-   `LANGCHAIN_TRACING_V2`: Set to `"true"` to use the V2 tracing protocol. Usually managed by the `LANGSMITH_ENABLED` setting.
+-   `LANGCHAIN_ENDPOINT`: LangSmith API endpoint. Defaults to `"https://api.smith.langchain.com"`.
+-   `LANGCHAIN_PROJECT`: Name of the project in LangSmith.
+
+### Local Network Search
+-   `ENABLE_LOCAL_SEARCH`: Set to `true` to enable searching within local network domains. Default: `false`.
+-   `LOCAL_SEARCH_DOMAINS`: A comma-separated list of base URLs or domains for local search.
+    -   Example: `"http://intranet.mycompany.com,http://docs.internal.team"`
+-   `SEARCH_MODE`: Defines the search behavior when both internet and local search capabilities might be active.
+    -   `"internet_only"` (Default): Searches only the public internet.
+    *   `"local_only"`: Searches only configured local domains (requires `ENABLE_LOCAL_SEARCH=true` and `LOCAL_SEARCH_DOMAINS` to be set).
+    *   `"internet_then_local"`: Performs internet search first, then local search if enabled.
+    *   `"local_then_internet"`: Performs local search first if enabled, then internet search.
+
+## Frontend UI Settings
+
+The user interface provides several controls to customize the agent's behavior for each query:
+
+-   **Effort Level:** (Low, Medium, High) - Adjusts the number of initial queries and maximum research loops.
+-   **Reasoning Model:** (Flash/Fast, Pro/Advanced) - Selects a class of model for reasoning tasks (reflection, answer synthesis). The actual model used depends on the selected LLM Provider.
+-   **LLM Provider:** (Gemini, OpenRouter, DeepSeek) - Choose the primary LLM provider for the current query. Requires corresponding API keys to be configured on the backend.
+-   **LangSmith Monitoring:** (Toggle Switch) - If LangSmith is enabled globally on the backend, this allows users to toggle tracing for their specific session/query.
+-   **Search Scope:** (Internet Only, Local Only, Internet then Local, Local then Internet) - Defines where the agent should search for information. "Local" options require backend configuration for local search.
 
 ## How the Backend Agent Works (High-Level)
 
@@ -67,11 +128,15 @@ The core of the backend is a LangGraph agent defined in `backend/src/agent/graph
 
 ![Agent Flow](./agent.png)
 
-1.  **Generate Initial Queries:** Based on your input, it generates a set of initial search queries using a Gemini model.
-2.  **Web Research:** For each query, it uses the Gemini model with the Google Search API to find relevant web pages.
-3.  **Reflection & Knowledge Gap Analysis:** The agent analyzes the search results to determine if the information is sufficient or if there are knowledge gaps. It uses a Gemini model for this reflection process.
-4.  **Iterative Refinement:** If gaps are found or the information is insufficient, it generates follow-up queries and repeats the web research and reflection steps (up to a configured maximum number of loops).
-5.  **Finalize Answer:** Once the research is deemed sufficient, the agent synthesizes the gathered information into a coherent answer, including citations from the web sources, using a Gemini model.
+1.  **Configure:** Reads settings from environment variables and per-request UI selections.
+2.  **Generate Initial Queries:** Based on your input and configured model, it generates initial search queries.
+3.  **Web/Local Research:** Depending on the `SEARCH_MODE`:
+    *   Performs searches using the Google Search API (for internet results).
+    *   Performs searches using the custom `LocalSearchTool` against configured domains (for local results).
+    *   Combines results if applicable.
+4.  **Reflection & Knowledge Gap Analysis:** The agent analyzes the search results to determine if the information is sufficient or if there are knowledge gaps.
+5.  **Iterative Refinement:** If gaps are found, it generates follow-up queries and repeats the research and reflection steps.
+6.  **Finalize Answer:** Once research is sufficient, the agent synthesizes the information into a coherent answer with citations, using the configured answer model.
 
 ## Deployment
 
@@ -89,8 +154,12 @@ _Note: If you are not running the docker-compose.yml example or exposing the bac
    ```
 **2. Run the Production Server:**
 
+   Adjust the `docker-compose.yml` or your deployment environment to include all necessary environment variables as described in the "Configuration" section.
+   Example:
    ```bash
-   GEMINI_API_KEY=<your_gemini_api_key> LANGSMITH_API_KEY=<your_langsmith_api_key> docker-compose up
+   # Ensure your .env file (if used by docker-compose) or environment variables are set
+   # e.g., GEMINI_API_KEY, LLM_PROVIDER, LLM_API_KEY, LANGSMITH_API_KEY (if LangSmith enabled), etc.
+   docker-compose up
    ```
 
 Open your browser and navigate to `http://localhost:8123/app/` to see the application. The API will be available at `http://localhost:8123`.
@@ -101,7 +170,8 @@ Open your browser and navigate to `http://localhost:8123/app/` to see the applic
 - [Tailwind CSS](https://tailwindcss.com/) - For styling.
 - [Shadcn UI](https://ui.shadcn.com/) - For components.
 - [LangGraph](https://github.com/langchain-ai/langgraph) - For building the backend research agent.
-- [Google Gemini](https://ai.google.dev/models/gemini) - LLM for query generation, reflection, and answer synthesis.
+- LLMs: [Google Gemini](https://ai.google.dev/models/gemini), and adaptable for others like [OpenRouter](https://openrouter.ai/), [DeepSeek](https://www.deepseek.com/).
+- Search: Google Search API, Custom Local Network Search (Python `requests` & `BeautifulSoup`).
 
 ## License
 

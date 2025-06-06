@@ -7,73 +7,71 @@ import { Button } from "@/components/ui/button";
 import { useState, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+// Badge removed as link styling is now direct
 import {
   ActivityTimeline,
   ProcessedEvent,
-} from "@/components/ActivityTimeline"; // Assuming ActivityTimeline is in the same dir or adjust path
+} from "@/components/ActivityTimeline";
 
-// Markdown component props type from former ReportView
+// Markdown component props type
 type MdComponentProps = {
   className?: string;
   children?: ReactNode;
   [key: string]: any;
 };
 
-// Markdown components (from former ReportView.tsx)
+// Updated Markdown components for light theme
 const mdComponents = {
   h1: ({ className, children, ...props }: MdComponentProps) => (
-    <h1 className={cn("text-2xl font-bold mt-4 mb-2", className)} {...props}>
+    <h1 className={cn("text-2xl font-bold mt-4 mb-2 text-foreground", className)} {...props}>
       {children}
     </h1>
   ),
   h2: ({ className, children, ...props }: MdComponentProps) => (
-    <h2 className={cn("text-xl font-bold mt-3 mb-2", className)} {...props}>
+    <h2 className={cn("text-xl font-bold mt-3 mb-2 text-foreground", className)} {...props}>
       {children}
     </h2>
   ),
   h3: ({ className, children, ...props }: MdComponentProps) => (
-    <h3 className={cn("text-lg font-bold mt-3 mb-1", className)} {...props}>
+    <h3 className={cn("text-lg font-bold mt-3 mb-1 text-foreground", className)} {...props}>
       {children}
     </h3>
   ),
   p: ({ className, children, ...props }: MdComponentProps) => (
-    <p className={cn("mb-3 leading-7", className)} {...props}>
+    <p className={cn("mb-3 leading-7 text-foreground", className)} {...props}>
       {children}
     </p>
   ),
   a: ({ className, children, href, ...props }: MdComponentProps) => (
-    <Badge className="text-xs mx-0.5">
-      <a
-        className={cn("text-blue-400 hover:text-blue-300 text-xs", className)}
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        {...props}
-      >
-        {children}
-      </a>
-    </Badge>
+    <a
+      className={cn("text-primary hover:text-primary/80 underline", className)}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      {...props}
+    >
+      {children}
+    </a>
   ),
   ul: ({ className, children, ...props }: MdComponentProps) => (
-    <ul className={cn("list-disc pl-6 mb-3", className)} {...props}>
+    <ul className={cn("list-disc pl-6 mb-3 text-foreground", className)} {...props}>
       {children}
     </ul>
   ),
   ol: ({ className, children, ...props }: MdComponentProps) => (
-    <ol className={cn("list-decimal pl-6 mb-3", className)} {...props}>
+    <ol className={cn("list-decimal pl-6 mb-3 text-foreground", className)} {...props}>
       {children}
     </ol>
   ),
   li: ({ className, children, ...props }: MdComponentProps) => (
-    <li className={cn("mb-1", className)} {...props}>
+    <li className={cn("mb-1 text-foreground", className)} {...props}>
       {children}
     </li>
   ),
   blockquote: ({ className, children, ...props }: MdComponentProps) => (
     <blockquote
       className={cn(
-        "border-l-4 border-neutral-600 pl-4 italic my-3 text-sm",
+        "border-l-4 border-border pl-4 italic my-3 text-muted-foreground",
         className
       )}
       {...props}
@@ -84,7 +82,7 @@ const mdComponents = {
   code: ({ className, children, ...props }: MdComponentProps) => (
     <code
       className={cn(
-        "bg-neutral-900 rounded px-1 py-0.5 font-mono text-xs",
+        "bg-muted text-muted-foreground rounded px-1 py-0.5 font-mono text-xs",
         className
       )}
       {...props}
@@ -95,7 +93,7 @@ const mdComponents = {
   pre: ({ className, children, ...props }: MdComponentProps) => (
     <pre
       className={cn(
-        "bg-neutral-900 p-3 rounded-lg overflow-x-auto font-mono text-xs my-3",
+        "bg-muted text-muted-foreground p-3 rounded-lg overflow-x-auto font-mono text-xs my-3",
         className
       )}
       {...props}
@@ -104,11 +102,11 @@ const mdComponents = {
     </pre>
   ),
   hr: ({ className, ...props }: MdComponentProps) => (
-    <hr className={cn("border-neutral-600 my-4", className)} {...props} />
+    <hr className={cn("border-border my-4", className)} {...props} />
   ),
   table: ({ className, children, ...props }: MdComponentProps) => (
     <div className="my-3 overflow-x-auto">
-      <table className={cn("border-collapse w-full", className)} {...props}>
+      <table className={cn("border-collapse w-full border border-border", className)} {...props}>
         {children}
       </table>
     </div>
@@ -116,7 +114,7 @@ const mdComponents = {
   th: ({ className, children, ...props }: MdComponentProps) => (
     <th
       className={cn(
-        "border border-neutral-600 px-3 py-2 text-left font-bold",
+        "border border-border px-3 py-2 text-left font-bold text-foreground", // Changed from card-foreground
         className
       )}
       {...props}
@@ -126,7 +124,7 @@ const mdComponents = {
   ),
   td: ({ className, children, ...props }: MdComponentProps) => (
     <td
-      className={cn("border border-neutral-600 px-3 py-2", className)}
+      className={cn("border border-border px-3 py-2 text-foreground", className)} // Changed from card-foreground
       {...props}
     >
       {children}
@@ -140,14 +138,14 @@ interface HumanMessageBubbleProps {
   mdComponents: typeof mdComponents;
 }
 
-// HumanMessageBubble Component
+// HumanMessageBubble Component - Updated for light theme
 const HumanMessageBubble: React.FC<HumanMessageBubbleProps> = ({
   message,
   mdComponents,
 }) => {
   return (
     <div
-      className={`text-white rounded-3xl break-words min-h-7 bg-neutral-700 max-w-[100%] sm:max-w-[90%] px-4 pt-3 rounded-br-lg`}
+      className={`text-primary-foreground rounded-xl break-words min-h-7 bg-primary max-w-[100%] sm:max-w-[90%] px-4 py-3 shadow rounded-br-lg`}
     >
       <ReactMarkdown components={mdComponents}>
         {typeof message.content === "string"
@@ -170,7 +168,7 @@ interface AiMessageBubbleProps {
   copiedMessageId: string | null;
 }
 
-// AiMessageBubble Component
+// AiMessageBubble Component - Updated for light theme
 const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
   message,
   historicalActivity,
@@ -181,15 +179,14 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
   handleCopy,
   copiedMessageId,
 }) => {
-  // Determine which activity events to show and if it's for a live loading message
   const activityForThisBubble =
     isLastMessage && isOverallLoading ? liveActivity : historicalActivity;
   const isLiveActivityForThisBubble = isLastMessage && isOverallLoading;
 
   return (
-    <div className={`relative break-words flex flex-col`}>
+    <div className={`relative break-words flex flex-col bg-card text-card-foreground p-4 rounded-xl shadow rounded-bl-none`}>
       {activityForThisBubble && activityForThisBubble.length > 0 && (
-        <div className="mb-3 border-b border-neutral-700 pb-3 text-xs">
+        <div className="mb-3 border-b border-border pb-3 text-xs text-muted-foreground">
           <ActivityTimeline
             processedEvents={activityForThisBubble}
             isLoading={isLiveActivityForThisBubble}
@@ -202,8 +199,9 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
           : JSON.stringify(message.content)}
       </ReactMarkdown>
       <Button
-        variant="default"
-        className="cursor-pointer bg-neutral-700 border-neutral-600 text-neutral-300 self-end"
+        variant="outline"
+        size="sm"
+        className="cursor-pointer bg-card hover:bg-accent text-muted-foreground hover:text-accent-foreground border-border self-end mt-2"
         onClick={() =>
           handleCopy(
             typeof message.content === "string"
@@ -213,8 +211,8 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
           )
         }
       >
+        {copiedMessageId === message.id ? <CopyCheck className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
         {copiedMessageId === message.id ? "Copied" : "Copy"}
-        {copiedMessageId === message.id ? <CopyCheck /> : <Copy />}
       </Button>
     </div>
   );
@@ -224,7 +222,8 @@ interface ChatMessagesViewProps {
   messages: Message[];
   isLoading: boolean;
   scrollAreaRef: React.RefObject<HTMLDivElement | null>;
-  onSubmit: (inputValue: string, effort: string, model: string) => void;
+  // Ensure this onSubmit matches the one in App.tsx after all modifications
+  onSubmit: (inputValue: string, effort: string, model: string, provider: string, langsmithEnabled: boolean, searchMode: string) => void;
   onCancel: () => void;
   liveActivityEvents: ProcessedEvent[];
   historicalActivities: Record<string, ProcessedEvent[]>;
@@ -245,7 +244,7 @@ export function ChatMessagesView({
     try {
       await navigator.clipboard.writeText(text);
       setCopiedMessageId(messageId);
-      setTimeout(() => setCopiedMessageId(null), 2000); // Reset after 2 seconds
+      setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {
       console.error("Failed to copy text: ", err);
     }
@@ -254,7 +253,7 @@ export function ChatMessagesView({
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-grow" ref={scrollAreaRef}>
-        <div className="p-4 md:p-6 space-y-2 max-w-4xl mx-auto pt-16">
+        <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto pt-16"> {/* Increased space-y for more separation */}
           {messages.map((message, index) => {
             const isLast = index === messages.length - 1;
             return (
@@ -270,16 +269,18 @@ export function ChatMessagesView({
                       mdComponents={mdComponents}
                     />
                   ) : (
-                    <AiMessageBubble
-                      message={message}
-                      historicalActivity={historicalActivities[message.id!]}
-                      liveActivity={liveActivityEvents} // Pass global live events
-                      isLastMessage={isLast}
-                      isOverallLoading={isLoading} // Pass global loading state
-                      mdComponents={mdComponents}
-                      handleCopy={handleCopy}
-                      copiedMessageId={copiedMessageId}
-                    />
+                    <div className="w-full max-w-[100%] sm:max-w-[90%]"> {/* Wrapper for AI bubble to control width */}
+                      <AiMessageBubble
+                        message={message}
+                        historicalActivity={historicalActivities[message.id!]}
+                        liveActivity={liveActivityEvents}
+                        isLastMessage={isLast}
+                        isOverallLoading={isLoading}
+                        mdComponents={mdComponents}
+                        handleCopy={handleCopy}
+                        copiedMessageId={copiedMessageId}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -289,22 +290,22 @@ export function ChatMessagesView({
             (messages.length === 0 ||
               messages[messages.length - 1].type === "human") && (
               <div className="flex items-start gap-3 mt-3">
-                {" "}
-                {/* AI message row structure */}
-                <div className="relative group max-w-[85%] md:max-w-[80%] rounded-xl p-3 shadow-sm break-words bg-neutral-800 text-neutral-100 rounded-bl-none w-full min-h-[56px]">
-                  {liveActivityEvents.length > 0 ? (
-                    <div className="text-xs">
-                      <ActivityTimeline
-                        processedEvents={liveActivityEvents}
-                        isLoading={true}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-start h-full">
-                      <Loader2 className="h-5 w-5 animate-spin text-neutral-400 mr-2" />
-                      <span>Processing...</span>
-                    </div>
-                  )}
+                <div className="w-full max-w-[100%] sm:max-w-[90%]"> {/* Wrapper for AI loading bubble */}
+                  <div className="relative group rounded-xl p-4 shadow break-words bg-card text-muted-foreground rounded-bl-none min-h-[56px]"> {/* Updated styles */}
+                    {liveActivityEvents.length > 0 ? (
+                      <div className="text-xs">
+                        <ActivityTimeline
+                          processedEvents={liveActivityEvents}
+                          isLoading={true}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-start h-full">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        <span>Processing...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
