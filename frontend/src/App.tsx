@@ -30,41 +30,91 @@ export default function App() {
       console.log(event);
     },
     onUpdateEvent: (event: any) => {
+      console.log("Received event:", event);
       let processedEvent: ProcessedEvent | null = null;
-      if (event.generate_query) {
-        processedEvent = {
-          title: "Generating Search Queries",
-          data: event.generate_query.query_list.join(", "),
-        };
-      } else if (event.web_research) {
-        const sources = event.web_research.sources_gathered || [];
-        const numSources = sources.length;
-        const uniqueLabels = [
-          ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
-        ];
-        const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
-        processedEvent = {
-          title: "Web Research",
-          data: `Gathered ${numSources} sources. Related to: ${
-            exampleLabels || "N/A"
-          }.`,
-        };
-      } else if (event.reflection) {
-        processedEvent = {
-          title: "Reflection",
-          data: event.reflection.is_sufficient
-            ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
-              )}`,
-        };
-      } else if (event.finalize_answer) {
-        processedEvent = {
-          title: "Finalizing Answer",
-          data: "Composing and presenting the final answer.",
-        };
-        hasFinalizeEventOccurredRef.current = true;
+      
+      // Handle different event types based on LangGraph node names
+      if (event.event === "on_chain_start" || event.event === "on_chain_stream") {
+        const metadata = event.metadata || {};
+        const data = event.data || {};
+        
+        // Handle node-specific events
+        if (metadata.langgraph_node === "generate_query" && data.output) {
+          processedEvent = {
+            title: "Generating Search Queries",
+            data: Array.isArray(data.output.query_list) 
+              ? data.output.query_list.join(", ")
+              : "Generating search queries...",
+          };
+        } else if (metadata.langgraph_node === "web_research" && data.output) {
+          const sources = data.output.sources_gathered || [];
+          const numSources = sources.length;
+          const uniqueLabels = [
+            ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
+          ];
+          const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
+          processedEvent = {
+            title: "Web Research",
+            data: `Gathered ${numSources} sources. Related to: ${
+              exampleLabels || "N/A"
+            }.`,
+          };
+        } else if (metadata.langgraph_node === "reflection" && data.output) {
+          processedEvent = {
+            title: "Reflection",
+            data: data.output.is_sufficient
+              ? "Search successful, generating final answer."
+              : `Need more information, searching for ${(data.output.follow_up_queries || []).join(
+                  ", "
+                )}`,
+          };
+        } else if (metadata.langgraph_node === "finalize_answer") {
+          processedEvent = {
+            title: "Finalizing Answer",
+            data: "Composing and presenting the final answer.",
+          };
+          hasFinalizeEventOccurredRef.current = true;
+        }
       }
+      
+      // Fallback for legacy event format
+      if (!processedEvent) {
+        if (event.generate_query) {
+          processedEvent = {
+            title: "Generating Search Queries",
+            data: event.generate_query.query_list?.join(", ") || "Generating search queries...",
+          };
+        } else if (event.web_research) {
+          const sources = event.web_research.sources_gathered || [];
+          const numSources = sources.length;
+          const uniqueLabels = [
+            ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
+          ];
+          const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
+          processedEvent = {
+            title: "Web Research",
+            data: `Gathered ${numSources} sources. Related to: ${
+              exampleLabels || "N/A"
+            }.`,
+          };
+        } else if (event.reflection) {
+          processedEvent = {
+            title: "Reflection",
+            data: event.reflection.is_sufficient
+              ? "Search successful, generating final answer."
+              : `Need more information, searching for ${(event.reflection.follow_up_queries || []).join(
+                  ", "
+                )}`,
+          };
+        } else if (event.finalize_answer) {
+          processedEvent = {
+            title: "Finalizing Answer",
+            data: "Composing and presenting the final answer.",
+          };
+          hasFinalizeEventOccurredRef.current = true;
+        }
+      }
+      
       if (processedEvent) {
         setProcessedEventsTimeline((prevEvents) => [
           ...prevEvents,
@@ -97,6 +147,8 @@ export default function App() {
           ...prev,
           [lastMessage.id!]: [...processedEventsTimeline],
         }));
+        // Clear the live timeline now that it's saved to history
+        setProcessedEventsTimeline([]);
       }
       hasFinalizeEventOccurredRef.current = false;
     }

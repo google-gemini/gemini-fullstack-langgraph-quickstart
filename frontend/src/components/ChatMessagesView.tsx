@@ -196,11 +196,19 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
           />
         </div>
       )}
-      <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
-      </ReactMarkdown>
+      {typeof message.content === "string" && message.content.trim() ? (
+        <ReactMarkdown components={mdComponents}>
+          {message.content}
+        </ReactMarkdown>
+      ) : typeof message.content !== "string" && message.content ? (
+        <ReactMarkdown components={mdComponents}>
+          {JSON.stringify(message.content)}
+        </ReactMarkdown>
+      ) : (
+        <div className="text-neutral-400 italic">
+          {isLastMessage && isOverallLoading ? "Generating response..." : "No content"}
+        </div>
+      )}
       <Button
         variant="default"
         className="cursor-pointer bg-neutral-700 border-neutral-600 text-neutral-300 self-end"
@@ -302,7 +310,7 @@ export function ChatMessagesView({
                   ) : (
                     <div className="flex items-center justify-start h-full">
                       <Loader2 className="h-5 w-5 animate-spin text-neutral-400 mr-2" />
-                      <span>Processing...</span>
+                      <span>Starting research...</span>
                     </div>
                   )}
                 </div>
