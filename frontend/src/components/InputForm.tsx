@@ -160,6 +160,46 @@ export const InputForm: React.FC<InputFormProps> = ({
                     <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
                   </div>
                 </SelectItem>
+                <SelectItem
+                  value="google/gemini-2.5-pro-preview"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Cpu className="h-4 w-4 mr-2 text-purple-400" /> OR Gemini 2.5 Pro
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="openai/gpt-4.1"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Cpu className="h-4 w-4 mr-2 text-green-400" /> GPT-4.1
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="google/gemini-2.5-flash-preview-05-20"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Zap className="h-4 w-4 mr-2 text-orange-400" /> OR 2.5 Flash
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="deepseek/deepseek-r1-0528:free"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Cpu className="h-4 w-4 mr-2 text-blue-400" /> DeepSeek R1
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="qwen/qwen3-235b-a22b"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Cpu className="h-4 w-4 mr-2 text-pink-400" /> Qwen3 235B
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
