@@ -17,7 +17,7 @@ Instructions:
 - Query should ensure that the most current information is gathered. The current date is {current_date}.
 
 Format: 
-- Format your response as a JSON object with ALL three of these exact keys:
+- Format your response as a JSON object with ALL two of these exact keys:
    - "rationale": Brief explanation of why these queries are relevant
    - "query": A list of search queries
 
