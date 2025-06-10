@@ -12,7 +12,7 @@ This project demonstrates a fullstack application using a React frontend and a L
 - 🌐 Integrated web research via Google Search API.
 - 🤔 Reflective reasoning to identify knowledge gaps and refine searches.
 - 📄 Generates answers with citations from gathered sources.
-- 🔄 Hot-reloading for both frontend and backend development during development.
+- 🔄 Hot-reloading for both frontend and backend development.
 
 ## Project Structure
 
