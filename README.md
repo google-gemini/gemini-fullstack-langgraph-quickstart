@@ -2,7 +2,7 @@
 
 This project demonstrates a fullstack application using a React frontend and a LangGraph-powered backend agent. The agent is designed to perform comprehensive research on a user's query by dynamically generating search terms, querying the web using Google Search, reflecting on the results to identify knowledge gaps, and iteratively refining its search until it can provide a well-supported answer with citations. This application serves as an example of building research-augmented conversational AI using LangGraph and Google's Gemini models.
 
-![Gemini Fullstack LangGraph](./app.png)
+<img src="./app.png" title="Gemini Fullstack LangGraph" alt="Gemini Fullstack LangGraph" width="90%">
 
 ## Features
 
@@ -65,7 +65,7 @@ _Alternatively, you can run the backend and frontend development servers separat
 
 The core of the backend is a LangGraph agent defined in `backend/src/agent/graph.py`. It follows these steps:
 
-![Agent Flow](./agent.png)
+<img src="./agent.png" title="Agent Flow" alt="Agent Flow" width="50%">
 
 1.  **Generate Initial Queries:** Based on your input, it generates a set of initial search queries using a Gemini model.
 2.  **Web Research:** For each query, it uses the Gemini model with the Google Search API to find relevant web pages.
