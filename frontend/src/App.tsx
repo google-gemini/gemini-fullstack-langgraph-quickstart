@@ -24,7 +24,7 @@ export default function App() {
     apiUrl: import.meta.env.DEV
       ? "http://localhost:2024"
       : "http://localhost:8123",
-    assistantId: "agent",
+    assistantId: "fe096781-5601-53d2-b2f6-0d3403f7e9ca",
     messagesKey: "messages",
     onFinish: (event: any) => {
       console.log(event);
@@ -34,7 +34,7 @@ export default function App() {
       if (event.generate_query) {
         processedEvent = {
           title: "Generating Search Queries",
-          data: event.generate_query.query_list.join(", "),
+          data: event.generate_query.query_list ? event.generate_query.query_list.join(", ") : "Generating queries...",
         };
       } else if (event.web_research) {
         const sources = event.web_research.sources_gathered || [];
@@ -54,9 +54,7 @@ export default function App() {
           title: "Reflection",
           data: event.reflection.is_sufficient
             ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
-              )}`,
+            : `Need more information, searching for ${event.reflection.follow_up_queries ? event.reflection.follow_up_queries.join(", ") : "additional queries"}`,
         };
       } else if (event.finalize_answer) {
         processedEvent = {
