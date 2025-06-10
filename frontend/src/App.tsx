@@ -27,49 +27,67 @@ export default function App() {
     assistantId: "agent",
     messagesKey: "messages",
     onFinish: (event: any) => {
-      console.log(event);
+      console.log('Finish event:', event);
     },
     onUpdateEvent: (event: any) => {
+      console.log('Received event:', event);
       let processedEvent: ProcessedEvent | null = null;
-      if (event.generate_query) {
-        processedEvent = {
-          title: "Generating Search Queries",
-          data: event.generate_query.query_list.join(", "),
-        };
-      } else if (event.web_research) {
-        const sources = event.web_research.sources_gathered || [];
-        const numSources = sources.length;
-        const uniqueLabels = [
-          ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
-        ];
-        const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
-        processedEvent = {
-          title: "Web Research",
-          data: `Gathered ${numSources} sources. Related to: ${
-            exampleLabels || "N/A"
-          }.`,
-        };
-      } else if (event.reflection) {
-        processedEvent = {
-          title: "Reflection",
-          data: event.reflection.is_sufficient
-            ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
-              )}`,
-        };
-      } else if (event.finalize_answer) {
-        processedEvent = {
-          title: "Finalizing Answer",
-          data: "Composing and presenting the final answer.",
-        };
-        hasFinalizeEventOccurredRef.current = true;
-      }
-      if (processedEvent) {
-        setProcessedEventsTimeline((prevEvents) => [
-          ...prevEvents,
-          processedEvent!,
-        ]);
+      
+      try {
+        if (event?.messages?.[0]?.content) {
+          // Handle message content
+          const content = event.messages[0].content;
+          processedEvent = {
+            title: "Response",
+            data: Array.isArray(content) ? content.join("\n") : String(content),
+          };
+        } else if (event?.generate_query?.query_list) {
+          const queryList = event.generate_query.query_list;
+          processedEvent = {
+            title: "Generating Search Queries",
+            data: Array.isArray(queryList) ? queryList.join(", ") : String(queryList),
+          };
+        } else if (event?.web_research) {
+          const sources = event.web_research.sources_gathered || [];
+          const numSources = sources.length;
+          const uniqueLabels = [
+            ...new Set(sources.map((s: any) => s?.label).filter(Boolean)),
+          ];
+          const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
+          processedEvent = {
+            title: "Web Research",
+            data: `Gathered ${numSources} sources. Related to: ${
+              exampleLabels || "N/A"
+            }.`,
+          };
+        } else if (event?.reflection) {
+          const followUpQueries = event.reflection.follow_up_queries;
+          processedEvent = {
+            title: "Reflection",
+            data: event.reflection.is_sufficient
+              ? "Search successful, generating final answer."
+              : `Need more information, searching for ${
+                  Array.isArray(followUpQueries) 
+                    ? followUpQueries.join(", ") 
+                    : followUpQueries || "additional information"
+                }`,
+          };
+        } else if (event?.finalize_answer) {
+          processedEvent = {
+            title: "Finalizing Answer",
+            data: "Composing and presenting the final answer.",
+          };
+          hasFinalizeEventOccurredRef.current = true;
+        }
+
+        if (processedEvent) {
+          setProcessedEventsTimeline((prevEvents) => [
+            ...prevEvents,
+            processedEvent!,
+          ]);
+        }
+      } catch (error) {
+        console.error('Error processing event:', error, event);
       }
     },
   });
