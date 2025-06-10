@@ -34,7 +34,9 @@ export default function App() {
       if (event.generate_query) {
         processedEvent = {
           title: "Generating Search Queries",
-          data: event.generate_query.query_list.join(", "),
+          data: Array.isArray(event.generate_query.query_list)
+            ? event.generate_query.query_list.join(", ")
+            : "",
         };
       } else if (event.web_research) {
         const sources = event.web_research.sources_gathered || [];
@@ -52,11 +54,13 @@ export default function App() {
       } else if (event.reflection) {
         processedEvent = {
           title: "Reflection",
-          data: event.reflection.is_sufficient
-            ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
-              )}`,
+          data: Array.isArray(event.reflection.follow_up_queries)
+            ? (event.reflection.is_sufficient
+                ? "Search successful, generating final answer."
+                : `Need more information, searching for ${event.reflection.follow_up_queries.join(", ")}`)
+            : (event.reflection.is_sufficient
+                ? "Search successful, generating final answer."
+                : "Need more information, searching for follow up queries."),
         };
       } else if (event.finalize_answer) {
         processedEvent = {

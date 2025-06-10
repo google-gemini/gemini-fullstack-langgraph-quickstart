@@ -239,6 +239,7 @@ export function ChatMessagesView({
   liveActivityEvents,
   historicalActivities,
 }: ChatMessagesViewProps) {
+  console.log("[DEBUG] Messages in ChatMessagesView:", messages); // Debug log
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const handleCopy = async (text: string, messageId: string) => {

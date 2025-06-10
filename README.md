@@ -33,6 +33,7 @@ Follow these steps to get the application running locally for development and te
     1.  Navigate to the `backend/` directory.
     2.  Create a file named `.env` by copying the `backend/.env.example` file.
     3.  Open the `.env` file and add your Gemini API key: `GEMINI_API_KEY="YOUR_ACTUAL_API_KEY"`
+    4.  (Optional) To enable web search and receive references as hyperlinks in the results, add your SerpAPI key: `SERPAPI_KEY="YOUR_SERPAPI_KEY"`
 
 **2. Install Dependencies:**
 
