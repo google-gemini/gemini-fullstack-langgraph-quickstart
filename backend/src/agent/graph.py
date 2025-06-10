@@ -7,7 +7,6 @@ from langgraph.types import Send
 from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
-from google.genai import Client
 
 from agent.state import (
     OverallState,
@@ -23,21 +22,28 @@ from agent.prompts import (
     reflection_instructions,
     answer_instructions,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.chat_models.litellm import ChatLiteLLM
+from firecrawl import FirecrawlApp
 from agent.utils import (
-    get_citations,
     get_research_topic,
-    insert_citation_markers,
-    resolve_urls,
+    # get_citations, # Commented out as per plan
+    # insert_citation_markers, # Commented out as per plan
+    # resolve_urls, # Commented out as per plan
 )
 
 load_dotenv()
 
-if os.getenv("GEMINI_API_KEY") is None:
-    raise ValueError("GEMINI_API_KEY is not set")
+# Environment variable checks
+required_env_vars = {
+    "ANTHROPIC_API_KEY": "Anthropic API key not found. Please set the ANTHROPIC_API_KEY environment variable.",
+    "FIRECRAWL_API_KEY": "Firecrawl API key not found. Please set the FIRECRAWL_API_KEY environment variable.",
+    "ANTHROPIC_API_BASE": "Anthropic API base URL (ANTHROPIC_API_BASE) not found. Set this if you're using a proxy or custom Anthropic API endpoint.",
+}
 
-# Used for Google Search API
-genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
+missing_vars = [var for var, msg in required_env_vars.items() if not os.getenv(var)]
+if missing_vars:
+    error_messages = "\n".join([required_env_vars[var] for var in missing_vars])
+    raise ValueError(f"Missing environment variables:\n{error_messages}")
 
 
 # Nodes
@@ -61,12 +67,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
     # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=configurable.query_generator_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    llm = ChatLiteLLM(model=configurable.query_generator_model, temperature=1.0)
     structured_llm = llm.with_structured_output(SearchQueryList)
 
     # Format the prompt
@@ -106,33 +107,59 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     """
     # Configure
     configurable = Configuration.from_runnable_config(config)
+
+    # Configure
+    configurable = Configuration.from_runnable_config(config)
+
+    # Instantiate LLM for processing (remains the same)
+    llm = ChatLiteLLM(model=configurable.query_generator_model, temperature=0)
+
+    # Instantiate FirecrawlApp
+    app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+
+    # Execute Firecrawl search
+    firecrawl_search_results = app.search(query=state["search_query"], params={'pageOptions': {'fetchPageContent': True}})
+
+    # Process Firecrawl's output
+    processed_text_parts = []
+    sources_gathered_fc = []
+    if firecrawl_search_results:
+        for item in firecrawl_search_results:
+            if item.get('markdown'):
+                processed_text_parts.append(f"Source URL: {item.get('url', 'N/A')}\nContent:\n{item['markdown']}")
+            if item.get('url'):
+                # Ensure 'id' is present and unique if needed by downstream processes.
+                # For now, using URL as a stand-in for a unique ID if state['id'] is not directly applicable here.
+                # Or, we can construct an ID based on the index or a hash of the URL.
+                # Let's try to keep it consistent with how 'id' was potentially used.
+                # If state["id"] was per-query, and now we have multiple results for one query, this needs care.
+                # For simplicity, let's make a generic source entry.
+                sources_gathered_fc.append({"value": item['url'], "short_url": item['url'], "id": item.get('url')})
+    else:
+        processed_text_parts.append("No search results found.")
+
+    search_results_content = "\n\n---\n\n".join(processed_text_parts)
+
+    # Prepare prompt for processing search results
     formatted_prompt = web_searcher_instructions.format(
         current_date=get_current_date(),
         research_topic=state["search_query"],
     )
+    processing_prompt = f"{formatted_prompt}\n\nHere are the search results:\n{search_results_content}\n\nPlease summarize these results and extract key information related to the research topic."
 
-    # Uses the google genai client as the langchain client doesn't return grounding metadata
-    response = genai_client.models.generate_content(
-        model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
-    )
-    # resolve the urls to short urls for saving tokens and time
-    resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
-    )
-    # Gets the citations and adds them to the generated text
-    citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
-    sources_gathered = [item for citation in citations for item in citation["segments"]]
+    # Process search results with LLM
+    processed_text_response = llm.invoke(processing_prompt)
+    processed_text = processed_text_response.content
+
+    # # Old sources_gathered logic is replaced by sources_gathered_fc
+    # sources_gathered = [
+    #     {"value": state["search_query"], "short_url": state["search_query"], "id": str(state["id"])}
+    # ]
 
     return {
-        "sources_gathered": sources_gathered,
-        "search_query": [state["search_query"]],
-        "web_research_result": [modified_text],
+        "sources_gathered": sources_gathered_fc,
+        "search_query": [state["search_query"]], # This likely remains the original query string
+        "web_research_result": [processed_text],
     }
 
 
@@ -163,12 +190,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
     # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    llm = ChatLiteLLM(model=reasoning_model, temperature=1.0)
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
     return {
@@ -242,12 +264,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     )
 
     # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    llm = ChatLiteLLM(model=reasoning_model, temperature=0)
     result = llm.invoke(formatted_prompt)
 
     # Replace the short urls with the original urls and add all used urls to the sources_gathered

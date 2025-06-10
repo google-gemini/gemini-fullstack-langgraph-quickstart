@@ -8,16 +8,21 @@ authors = [
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11,<4.0"
+package_dir = {"" = "src"}
+packages = ["agent"]
 dependencies = [
     "langgraph>=0.2.6",
     "langchain>=0.3.19",
-    "langchain-google-genai",
     "python-dotenv>=1.0.1",
     "langgraph-sdk>=0.1.57",
     "langgraph-cli",
     "langgraph-api",
     "fastapi",
-    "google-genai",
+    "litellm",
+    "anthropic",
+    "firecrawl-py",
+    "google-api-python-client", # Added in a previous step to requirements.txt, so including here for consistency
+    "google-searchresults",   # Added in a previous step to requirements.txt, so including here for consistency
 ]
 
 
