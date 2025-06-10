@@ -39,6 +39,13 @@ class Configuration(BaseModel):
         metadata={"description": "The maximum number of research loops to perform."},
     )
 
+    reasoning_model: str = Field(
+        default="gemini-2.5-flash-preview-04-17",
+        metadata={
+            "description": "The name of the language model to use for the agent's reasoning."
+        },
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
