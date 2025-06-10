@@ -196,11 +196,18 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
           />
         </div>
       )}
-      <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
-      </ReactMarkdown>
+      {/* Only render markdown if we have content */}
+      {message.content && (typeof message.content === "string" ? message.content.trim() : true) ? (
+        <ReactMarkdown components={mdComponents}>
+          {typeof message.content === "string"
+            ? message.content
+            : JSON.stringify(message.content)}
+        </ReactMarkdown>
+      ) : (
+        <div className="text-neutral-400 italic">
+          {isLiveActivityForThisBubble ? "Processing..." : "No response received"}
+        </div>
+      )}
       <Button
         variant="default"
         className="cursor-pointer bg-neutral-700 border-neutral-600 text-neutral-300 self-end"

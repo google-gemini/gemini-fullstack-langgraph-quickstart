@@ -32,9 +32,10 @@ export default function App() {
     onUpdateEvent: (event: any) => {
       let processedEvent: ProcessedEvent | null = null;
       if (event.generate_query) {
+        const queryList = event.generate_query.query_list || [];
         processedEvent = {
           title: "Generating Search Queries",
-          data: event.generate_query.query_list.join(", "),
+          data: queryList.join(", "),
         };
       } else if (event.web_research) {
         const sources = event.web_research.sources_gathered || [];
@@ -54,7 +55,7 @@ export default function App() {
           title: "Reflection",
           data: event.reflection.is_sufficient
             ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
+            : `Need more information, searching for ${(event.reflection.follow_up_queries || []).join(
                 ", "
               )}`,
         };
