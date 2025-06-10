@@ -1,0 +1,146 @@
+name: 💡 Feature Request
+description: Suggest a new feature or enhancement for the Gemini Research Agent MCP Server
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please fill out this form to help us understand your request.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A brief summary of the feature you'd like to see
+      placeholder: What feature would you like to see added?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe the use case or problem this feature would solve
+      placeholder: |
+        What problem does this solve?
+        Who would benefit from this feature?
+        How would it improve your workflow?
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Detailed Description
+      description: A detailed description of the proposed feature
+      placeholder: |
+        Provide a detailed description of how this feature should work.
+        Include any specific requirements or behaviors.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What category does this feature belong to?
+      options:
+        - Research capabilities
+        - Search integration
+        - Performance optimization
+        - User interface/experience
+        - Configuration/setup
+        - Documentation
+        - Testing/quality assurance
+        - Integration with other tools
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How would you prioritize this feature?
+      options:
+        - Low - Nice to have
+        - Medium - Would be helpful
+        - High - Important for my workflow
+        - Critical - Blocking my use case
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives have you considered?
+      placeholder: |
+        Are there any workarounds you're currently using?
+        Have you found similar features in other tools?
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Do you have any ideas about how this could be implemented?
+      placeholder: |
+        If you have technical ideas about implementation, please share them.
+        This is optional but can be helpful for planning.
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or Mockups
+      description: Provide examples, mockups, or references
+      placeholder: |
+        You can include:
+        - Example commands or API calls
+        - Screenshots or mockups
+        - Links to similar features in other tools
+        - Code snippets showing desired usage
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: effort-levels
+    attributes:
+      label: Effort Level Relevance
+      description: Which effort levels would this feature apply to?
+      options:
+        - label: Low effort (10 searches)
+        - label: Medium effort (100 searches)
+        - label: High effort (1000 searches)
+        - label: All effort levels
+        - label: Not applicable to effort levels
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any additional information that might be helpful
+      placeholder: Links to related issues, discussions, or external resources
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before submitting
+      options:
+        - label: I have searched for existing feature requests
+          required: true
+        - label: I have clearly described the use case
+          required: true
+        - label: I have provided sufficient detail for implementation
+          required: true
+        - label: This feature aligns with the project's goals
+          required: true 
