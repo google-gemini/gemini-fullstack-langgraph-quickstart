@@ -54,9 +54,9 @@ export default function App() {
           title: "Reflection",
           data: event.reflection.is_sufficient
             ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
+            : `Need more information, searching for ${event.reflection.follow_up_queries?.join(
                 ", "
-              )}`,
+              ) || "additional queries"}`,
         };
       } else if (event.finalize_answer) {
         processedEvent = {
