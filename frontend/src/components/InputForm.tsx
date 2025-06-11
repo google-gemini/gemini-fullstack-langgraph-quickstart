@@ -35,10 +35,9 @@ export const InputForm: React.FC<InputFormProps> = ({
     setInternalInputValue("");
   };
 
-  const handleInternalKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
-  ) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Submit with Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleInternalSubmit();
     }
@@ -59,9 +58,9 @@ export const InputForm: React.FC<InputFormProps> = ({
         <Textarea
           value={internalInputValue}
           onChange={(e) => setInternalInputValue(e.target.value)}
-          onKeyDown={handleInternalKeyDown}
+          onKeyDown={handleKeyDown}
           placeholder="Who won the Euro 2024 and scored the most goals?"
-          className={`w-full text-neutral-100 placeholder-neutral-500 resize-none border-0 focus:outline-none focus:ring-0 outline-none focus-visible:ring-0 shadow-none 
+          className={`w-full text-neutral-100 placeholder-neutral-500 resize-none border-0 focus:outline-none focus:ring-0 outline-none focus-visible:ring-0 shadow-none
                         md:text-base  min-h-[56px] max-h-[200px]`}
           rows={1}
         />
