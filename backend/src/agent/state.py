@@ -21,6 +21,8 @@ class OverallState(TypedDict):
     max_research_loops: int
     research_loop_count: int
     reasoning_model: str
+    confirmation_completed: bool  # Whether confirmation question has been completed
+    skip_confirmation: bool      # Whether to skip confirmation
 
 
 class ReflectionState(TypedDict):

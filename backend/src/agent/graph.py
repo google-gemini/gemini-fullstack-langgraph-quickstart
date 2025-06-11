@@ -1,6 +1,6 @@
 import os
 
-from agent.tools_and_schemas import SearchQueryList, Reflection
+from agent.tools_and_schemas import SearchQueryList, Reflection, ConfirmationQuestion
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
 from langgraph.types import Send
@@ -22,6 +22,7 @@ from agent.prompts import (
     web_searcher_instructions,
     reflection_instructions,
     answer_instructions,
+    confirmation_question_instructions,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
 from agent.utils import (
@@ -40,7 +41,72 @@ if os.getenv("GEMINI_API_KEY") is None:
 genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
+# Utility functions for confirmation flow
+def should_skip_confirmation(messages: list) -> bool:
+    """Determine if confirmation should be skipped"""
+    if not messages:
+        return False
+
+    last_message = messages[-1].content.lower()
+    skip_phrases = ["answer immediately", "no questions", "skip questions", "without questions", "no confirmation"]
+
+    return any(phrase in last_message for phrase in skip_phrases)
+
+
+def check_initial_state(state: OverallState) -> str:
+    """Check initial state and determine next node"""
+    # If confirmation is completed
+    if state.get("confirmation_completed", False):
+        return "generate_query"
+
+    # If skip flag is set
+    if state.get("skip_confirmation", False):
+        return "generate_query"
+
+    # If message contains skip instruction
+    if should_skip_confirmation(state.get("messages", [])):
+        return "generate_query"
+
+    # If there are 2 or more messages (response to confirmation question exists)
+    if len(state.get("messages", [])) >= 2:
+        return "generate_query"
+
+    # Otherwise, ask confirmation question
+    return "confirmation_question"
+
+
 # Nodes
+def confirmation_question(state: OverallState, config: RunnableConfig) -> dict:
+    """Node that generates confirmation question for initial message"""
+    configurable = Configuration.from_runnable_config(config)
+
+    # Use Gemini 2.0 Flash
+    llm = ChatGoogleGenerativeAI(
+        model=configurable.query_generator_model,
+        temperature=0.7,
+        max_retries=2,
+        api_key=os.getenv("GEMINI_API_KEY"),
+    )
+    structured_llm = llm.with_structured_output(ConfirmationQuestion)
+
+    # Format prompt
+    formatted_prompt = confirmation_question_instructions.format(
+        research_topic=get_research_topic(state["messages"])
+    )
+
+    # Generate confirmation question
+    result = structured_llm.invoke(formatted_prompt)
+
+    # Return as AI message with LLM-generated skip instruction
+    confirmation_message = f"{result.question}\n\n({result.skip_instruction})"
+
+    return {
+        "messages": [AIMessage(content=confirmation_message)],
+        "confirmation_completed": False,
+        "skip_confirmation": False
+    }
+
+
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates a search queries based on the User's question.
 
@@ -55,6 +121,9 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         Dictionary with state update, including search_query key containing the generated query
     """
     configurable = Configuration.from_runnable_config(config)
+
+    # Set confirmation completed flag
+    state["confirmation_completed"] = True
 
     # check for custom initial search query count
     if state.get("initial_search_query_count") is None:
@@ -151,9 +220,9 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         Dictionary with state update, including search_query key containing the generated follow-up query
     """
     configurable = Configuration.from_runnable_config(config)
-    # Increment the research loop count and get the reasoning model
+    # Increment the research loop count and get the reflection model
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    reflection_model = state.get("reflection_model") or configurable.reflection_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -162,9 +231,9 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         research_topic=get_research_topic(state["messages"]),
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
-    # init Reasoning Model
+    # init Reflection Model
     llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+        model=reflection_model,
         temperature=1.0,
         max_retries=2,
         api_key=os.getenv("GEMINI_API_KEY"),
@@ -231,7 +300,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
     configurable = Configuration.from_runnable_config(config)
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    answer_model = state.get("answer_model") or configurable.answer_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -241,9 +310,9 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         summaries="\n---\n\n".join(state["web_research_result"]),
     )
 
-    # init Reasoning Model, default to Gemini 2.5 Flash
+    # init Answer Model, default to Gemini 2.5 Pro
     llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+        model=answer_model,
         temperature=0,
         max_retries=2,
         api_key=os.getenv("GEMINI_API_KEY"),
@@ -268,26 +337,34 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
 # Create our Agent Graph
 builder = StateGraph(OverallState, config_schema=Configuration)
 
-# Define the nodes we will cycle between
+# Define the nodes
+builder.add_node("confirmation_question", confirmation_question)
 builder.add_node("generate_query", generate_query)
 builder.add_node("web_research", web_research)
 builder.add_node("reflection", reflection)
 builder.add_node("finalize_answer", finalize_answer)
 
-# Set the entrypoint as `generate_query`
-# This means that this node is the first one called
-builder.add_edge(START, "generate_query")
-# Add conditional edge to continue with search queries in a parallel branch
+# Conditional routing at entry point
+builder.add_conditional_edges(
+    START,
+    check_initial_state,
+    {
+        "confirmation_question": "confirmation_question",
+        "generate_query": "generate_query"
+    }
+)
+
+# End after confirmation question (wait for user response)
+builder.add_edge("confirmation_question", END)
+
+# Continue with existing flow after generate_query
 builder.add_conditional_edges(
     "generate_query", continue_to_web_research, ["web_research"]
 )
-# Reflect on the web research
 builder.add_edge("web_research", "reflection")
-# Evaluate the research
 builder.add_conditional_edges(
     "reflection", evaluate_research, ["web_research", "finalize_answer"]
 )
-# Finalize the answer
 builder.add_edge("finalize_answer", END)
 
 graph = builder.compile(name="pro-search-agent")
