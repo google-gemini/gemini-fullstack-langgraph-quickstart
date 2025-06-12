@@ -1,4 +1,5 @@
 import { InputForm } from "./InputForm";
+import type { FC } from "react";
 
 interface WelcomeScreenProps {
   handleSubmit: (
@@ -10,7 +11,7 @@ interface WelcomeScreenProps {
   isLoading: boolean;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
+export const WelcomeScreen: FC<WelcomeScreenProps> = ({
   handleSubmit,
   onCancel,
   isLoading,
