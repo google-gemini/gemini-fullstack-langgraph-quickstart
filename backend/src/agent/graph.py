@@ -42,9 +42,9 @@ genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
-    """LangGraph node that generates a search queries based on the User's question.
+    """LangGraph node that generates search queries based on the User's question.
 
-    Uses Gemini 2.0 Flash to create an optimized search query for web research based on
+    Uses Gemini 2.0 Flash to create an optimized search queries for web research based on
     the User's question.
 
     Args:
@@ -52,7 +52,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         config: Configuration for the runnable, including LLM provider settings
 
     Returns:
-        Dictionary with state update, including search_query key containing the generated query
+        Dictionary with state update, including search_query key containing the generated queries
     """
     configurable = Configuration.from_runnable_config(config)
 
