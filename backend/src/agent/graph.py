@@ -1,4 +1,6 @@
 import os
+import sys
+import logging
 
 from agent.tools_and_schemas import SearchQueryList, Reflection
 from dotenv import load_dotenv
@@ -8,6 +10,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
 from google.genai import Client
+from google.api_core import exceptions as google_exceptions
 
 from agent.state import (
     OverallState,
@@ -29,9 +32,13 @@ from agent.utils import (
     get_research_topic,
     insert_citation_markers,
     resolve_urls,
+    create_llm,
 )
 
 load_dotenv()
+
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 if os.getenv("GEMINI_API_KEY") is None:
     raise ValueError("GEMINI_API_KEY is not set")
@@ -54,6 +61,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     Returns:
         Dictionary with state update, including search_query key containing the generated query
     """
+    logging.info("Starting query generation.")
     configurable = Configuration.from_runnable_config(config)
 
     # check for custom initial search query count
@@ -61,10 +69,10 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
     # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=configurable.query_generator_model,
-        temperature=1.0,
-        max_retries=2,
+    llm = create_llm(
+        model_name=configurable.query_generator_model,
+        temperature=configurable.query_generator_temperature,
+        max_retries=configurable.llm_max_retries,
         api_key=os.getenv("GEMINI_API_KEY"),
     )
     structured_llm = llm.with_structured_output(SearchQueryList)
@@ -77,8 +85,15 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         number_queries=state["initial_search_query_count"],
     )
     # Generate the search queries
-    result = structured_llm.invoke(formatted_prompt)
-    return {"query_list": result.query}
+    try:
+        result = structured_llm.invoke(formatted_prompt)
+        logging.info(f"Generated queries: {result.query}")
+        logging.info("Finished query generation.")
+        return {"query_list": result.query}
+    except google_exceptions.GoogleAPIError as e:
+        logging.error(f"Error generating search queries: {e}")
+        logging.info("Finished query generation.")
+        return {"query_list": []}
 
 
 def continue_to_web_research(state: QueryGenerationState):
@@ -104,6 +119,7 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     Returns:
         Dictionary with state update, including sources_gathered, research_loop_count, and web_research_results
     """
+    logging.info(f"Starting web research for query: {state['search_query']}")
     # Configure
     configurable = Configuration.from_runnable_config(config)
     formatted_prompt = web_searcher_instructions.format(
@@ -112,28 +128,38 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     )
 
     # Uses the google genai client as the langchain client doesn't return grounding metadata
-    response = genai_client.models.generate_content(
-        model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
-    )
-    # resolve the urls to short urls for saving tokens and time
-    resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
-    )
-    # Gets the citations and adds them to the generated text
-    citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
-    sources_gathered = [item for citation in citations for item in citation["segments"]]
-
-    return {
-        "sources_gathered": sources_gathered,
-        "search_query": [state["search_query"]],
-        "web_research_result": [modified_text],
-    }
+    try:
+        response = genai_client.models.generate_content(
+            model=configurable.query_generator_model,
+            contents=formatted_prompt,
+            config={
+                "tools": [{"google_search": {}}],
+                "temperature": 0,
+            },
+        )
+        # resolve the urls to short urls for saving tokens and time
+        resolved_urls = resolve_urls(
+            response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
+        )
+        # Gets the citations and adds them to the generated text
+        citations = get_citations(response, resolved_urls)
+        modified_text = insert_citation_markers(response.text, citations)
+        sources_gathered = [item for citation in citations for item in citation["segments"]]
+        logging.info(f"Web research completed. Found {len(sources_gathered)} sources.")
+        logging.info(f"Finished web research for query: {state['search_query']}")
+        return {
+            "sources_gathered": sources_gathered,
+            "search_query": [state["search_query"]],
+            "web_research_result": [modified_text],
+        }
+    except google_exceptions.GoogleAPIError as e:
+        logging.error(f"Error during web research for query '{state.get('search_query', 'unknown query')}': {e}")
+        logging.info(f"Finished web research for query: {state.get('search_query', 'unknown query')}")
+        return {
+            "sources_gathered": [],
+            "search_query": [state.get("search_query", "unknown query")],
+            "web_research_result": ["Error performing web research."],
+        }
 
 
 def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
@@ -150,6 +176,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     Returns:
         Dictionary with state update, including search_query key containing the generated follow-up query
     """
+    logging.info("Starting reflection.")
     configurable = Configuration.from_runnable_config(config)
     # Increment the research loop count and get the reasoning model
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
@@ -163,21 +190,33 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
     # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=1.0,
-        max_retries=2,
+    llm = create_llm(
+        model_name=reasoning_model,
+        temperature=configurable.reflection_temperature,
+        max_retries=configurable.llm_max_retries,
         api_key=os.getenv("GEMINI_API_KEY"),
     )
-    result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
-
-    return {
-        "is_sufficient": result.is_sufficient,
-        "knowledge_gap": result.knowledge_gap,
-        "follow_up_queries": result.follow_up_queries,
-        "research_loop_count": state["research_loop_count"],
-        "number_of_ran_queries": len(state["search_query"]),
-    }
+    try:
+        result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
+        logging.info(f"Reflection result: Is sufficient? {result.is_sufficient}, Knowledge gap: {result.knowledge_gap}")
+        logging.info("Finished reflection.")
+        return {
+            "is_sufficient": result.is_sufficient,
+            "knowledge_gap": result.knowledge_gap,
+            "follow_up_queries": result.follow_up_queries,
+            "research_loop_count": state["research_loop_count"],
+            "number_of_ran_queries": len(state["search_query"]),
+        }
+    except google_exceptions.GoogleAPIError as e:
+        logging.error(f"Error during reflection: {e}")
+        logging.info("Finished reflection.")
+        return {
+            "is_sufficient": True,  # Assume sufficient to avoid loops if reflection fails
+            "knowledge_gap": "Error during reflection.",
+            "follow_up_queries": [],
+            "research_loop_count": state.get("research_loop_count", 0), # Preserve loop count
+            "number_of_ran_queries": state.get("number_of_ran_queries", 0) # Preserve query count
+        }
 
 
 def evaluate_research(
@@ -230,6 +269,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     Returns:
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
+    logging.info("Starting answer finalization.")
     configurable = Configuration.from_runnable_config(config)
     reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
 
@@ -242,27 +282,36 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     )
 
     # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=0,
-        max_retries=2,
+    llm = create_llm(
+        model_name=reasoning_model,
+        temperature=configurable.answer_temperature,
+        max_retries=configurable.llm_max_retries,
         api_key=os.getenv("GEMINI_API_KEY"),
     )
-    result = llm.invoke(formatted_prompt)
+    try:
+        result = llm.invoke(formatted_prompt)
+        logging.info("Answer finalized successfully.")
 
-    # Replace the short urls with the original urls and add all used urls to the sources_gathered
-    unique_sources = []
-    for source in state["sources_gathered"]:
-        if source["short_url"] in result.content:
-            result.content = result.content.replace(
-                source["short_url"], source["value"]
-            )
-            unique_sources.append(source)
-
-    return {
-        "messages": [AIMessage(content=result.content)],
-        "sources_gathered": unique_sources,
-    }
+        # Replace the short urls with the original urls and add all used urls to the sources_gathered
+        unique_sources = []
+        for source in state.get("sources_gathered", []): # Iterate over a safe default
+            if source.get("short_url") and source.get("value") and source["short_url"] in result.content:
+                result.content = result.content.replace(
+                    source["short_url"], source["value"]
+                )
+                unique_sources.append(source)
+        logging.info("Finished answer finalization.")
+        return {
+            "messages": [AIMessage(content=result.content)],
+            "sources_gathered": unique_sources,
+        }
+    except google_exceptions.GoogleAPIError as e:
+        logging.error(f"Error generating final answer: {e}")
+        logging.info("Finished answer finalization.")
+        return {
+            "messages": [AIMessage(content="Error generating final answer.")],
+            "sources_gathered": state.get("sources_gathered", []) # Preserve sources if available
+        }
 
 
 # Create our Agent Graph

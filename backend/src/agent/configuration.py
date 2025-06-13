@@ -39,6 +39,26 @@ class Configuration(BaseModel):
         metadata={"description": "The maximum number of research loops to perform."},
     )
 
+    query_generator_temperature: float = Field(
+        default=1.0,
+        metadata={"description": "Temperature for the query generator LLM."}
+    )
+
+    reflection_temperature: float = Field(
+        default=1.0,
+        metadata={"description": "Temperature for the reflection LLM."}
+    )
+
+    answer_temperature: float = Field(
+        default=0.0,
+        metadata={"description": "Temperature for the answer generation LLM."}
+    )
+
+    llm_max_retries: int = Field(
+        default=2,
+        metadata={"description": "Maximum number of retries for LLM calls."}
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
