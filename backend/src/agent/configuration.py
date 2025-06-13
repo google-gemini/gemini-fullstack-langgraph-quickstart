@@ -39,6 +39,16 @@ class Configuration(BaseModel):
         metadata={"description": "The maximum number of research loops to perform."},
     )
 
+    llm_temperature: float = Field(
+        default=0.7,
+        metadata={"description": "The temperature for LLM calls."},
+    )
+
+    num_search_results: int = Field(
+        default=5,
+        metadata={"description": "The number of search results to retrieve."},
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None

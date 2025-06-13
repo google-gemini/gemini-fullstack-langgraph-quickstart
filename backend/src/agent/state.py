@@ -40,9 +40,12 @@ class QueryGenerationState(TypedDict):
     query_list: list[Query]
 
 
+from typing import Optional
+
 class WebSearchState(TypedDict):
     search_query: str
     id: str
+    num_search_results: Optional[int] # Added num_search_results
 
 
 @dataclass(kw_only=True)

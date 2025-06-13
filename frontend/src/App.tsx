@@ -43,20 +43,20 @@ export default function App() {
           ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
         ];
         const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
+        // Assuming event.web_research.search_query will be available from the backend event
+        const searchQuery = event.web_research.search_query || "current topic";
         processedEvent = {
-          title: "Web Research",
-          data: `Gathered ${numSources} sources. Related to: ${
+          title: `Web Research for: "${searchQuery}"`, // Updated title
+          data: `Gathered ${numSources} sources. Related to: ${ // Kept existing data structure
             exampleLabels || "N/A"
           }.`,
         };
       } else if (event.reflection) {
         processedEvent = {
-          title: "Reflection",
+          title: "Reflection", // Title remains the same
           data: event.reflection.is_sufficient
-            ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
-              )}`,
+            ? "Information is sufficient. Generating final answer." // Updated data for sufficient
+            : `Knowledge Gap: "${event.reflection.knowledge_gap}". Will search for: "${event.reflection.follow_up_queries.join(", ")}"`, // Updated data for insufficient
         };
       } else if (event.finalize_answer) {
         processedEvent = {
