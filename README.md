@@ -61,6 +61,24 @@ This will run the backend and frontend development servers.    Open your browser
 
 _Alternatively, you can run the backend and frontend development servers separately. For the backend, open a terminal in the `backend/` directory and run `langgraph dev`. The backend API will be available at `http://127.0.0.1:2024`. It will also open a browser window to the LangGraph UI. For the frontend, open a terminal in the `frontend/` directory and run `npm run dev`. The frontend will be available at `http://localhost:5173`._
 
+## Configuring AI Models
+
+You can configure the specific Google AI models used by the agent for different tasks by setting the following environment variables:
+
+-   `QUERY_GENERATOR_MODEL`: The model used to generate search queries.
+-   `REFLECTION_MODEL`: The model used for reflection during the research process.
+-   `ANSWER_MODEL`: The model used to generate the final answer.
+
+For example, you can add these to your `.env` file in the `backend` directory:
+
+```
+QUERY_GENERATOR_MODEL=gemini-2.0-flash
+REFLECTION_MODEL=gemini-2.5-flash-preview-04-17
+ANSWER_MODEL=gemini-2.5-pro-preview-05-06
+```
+
+If these variables are not set, the agent will use default models specified in the configuration.
+
 ## How the Backend Agent Works (High-Level)
 
 The core of the backend is a LangGraph agent defined in `backend/src/agent/graph.py`. It follows these steps:
