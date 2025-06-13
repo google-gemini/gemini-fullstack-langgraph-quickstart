@@ -7,16 +7,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
-  Activity,
   Info,
-  Search,
-  TextSearch,
-  Brain,
-  Pen,
   ChevronDown,
-  ChevronUp,
+  // ChevronUp, // Will use motion.div to rotate ChevronDown
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from 'framer-motion'; // Import motion
+import TimelineEvent from './chat/TimelineEvent';
 
 export interface ProcessedEvent {
   title: string;
@@ -34,110 +31,73 @@ export function ActivityTimeline({
 }: ActivityTimelineProps) {
   const [isTimelineCollapsed, setIsTimelineCollapsed] =
     useState<boolean>(false);
-  const getEventIcon = (title: string, index: number) => {
-    if (index === 0 && isLoading && processedEvents.length === 0) {
-      return <Loader2 className="h-4 w-4 text-neutral-400 animate-spin" />;
-    }
-    if (title.toLowerCase().includes("generating")) {
-      return <TextSearch className="h-4 w-4 text-neutral-400" />;
-    } else if (title.toLowerCase().includes("thinking")) {
-      return <Loader2 className="h-4 w-4 text-neutral-400 animate-spin" />;
-    } else if (title.toLowerCase().includes("reflection")) {
-      return <Brain className="h-4 w-4 text-neutral-400" />;
-    } else if (title.toLowerCase().includes("research")) {
-      return <Search className="h-4 w-4 text-neutral-400" />;
-    } else if (title.toLowerCase().includes("finalizing")) {
-      return <Pen className="h-4 w-4 text-neutral-400" />;
-    }
-    return <Activity className="h-4 w-4 text-neutral-400" />;
-  };
 
   useEffect(() => {
-    if (!isLoading && processedEvents.length !== 0) {
+    if (!isLoading && processedEvents.length > 0) {
       setIsTimelineCollapsed(true);
     }
   }, [isLoading, processedEvents]);
 
   return (
-    <Card className="border-none rounded-lg bg-neutral-700 max-h-96">
-      <CardHeader>
-        <CardDescription className="flex items-center justify-between">
+    <Card className="border-none rounded-lg bg-muted/30 dark:bg-muted/10 max-h-96 shadow-none">
+      <CardHeader className="p-3"> {/* Reduced padding for header */}
+        <CardDescription className="flex items-center justify-between text-xs">
           <div
-            className="flex items-center justify-start text-sm w-full cursor-pointer gap-2 text-neutral-100"
+            role="button" // Added role
+            tabIndex={0} // Make focusable
+            aria-expanded={!isTimelineCollapsed} // ARIA expanded state
+            // aria-controls="timeline-content-area" // If the motion.div below had id="timeline-content-area"
+            className="flex items-center justify-start w-full cursor-pointer gap-1 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm" // Added focus styling
             onClick={() => setIsTimelineCollapsed(!isTimelineCollapsed)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsTimelineCollapsed(!isTimelineCollapsed); }} // Keyboard activation
           >
-            Research
-            {isTimelineCollapsed ? (
-              <ChevronDown className="h-4 w-4 mr-2" />
-            ) : (
-              <ChevronUp className="h-4 w-4 mr-2" />
-            )}
+            <motion.div
+              animate={{ rotate: isTimelineCollapsed ? 0 : 180 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="h-4 w-4" /> {/* Adjusted margin by removing mr-1, added to text instead */}
+            </motion.div>
+            <span className="ml-1">Research Activity</span> {/* Added ml-1 to text for spacing */}
           </div>
         </CardDescription>
       </CardHeader>
-      {!isTimelineCollapsed && (
-        <ScrollArea className="max-h-96 overflow-y-auto">
-          <CardContent>
+      <AnimatePresence initial={false}> {/* initial={false} to prevent animation on mount */}
+        {!isTimelineCollapsed && (
+          <motion.div
+            key="timeline-content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden" // Crucial for height animation
+          >
+            <ScrollArea className="max-h-80 overflow-y-auto">
+              <CardContent className="p-3 pt-0">
+                <AnimatePresence> {/* This AnimatePresence is for the TimelineEvents inside */}
+                  {processedEvents.map((event, index) => (
+                <TimelineEvent
+                  key={index}
+                  event={event}
+                  isLast={index === processedEvents.length - 1}
+                  isLoading={isLoading}
+                />
+              ))}
+            </AnimatePresence>
             {isLoading && processedEvents.length === 0 && (
-              <div className="relative pl-8 pb-4">
-                <div className="absolute left-3 top-3.5 h-full w-0.5 bg-neutral-800" />
-                <div className="absolute left-0.5 top-2 h-5 w-5 rounded-full bg-neutral-800 flex items-center justify-center ring-4 ring-neutral-900">
-                  <Loader2 className="h-3 w-3 text-neutral-400 animate-spin" />
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-300 font-medium">
-                    Searching...
-                  </p>
-                </div>
+              <div className="flex items-center justify-center p-4 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                <p className="text-sm">Searching...</p>
               </div>
             )}
-            {processedEvents.length > 0 ? (
-              <div className="space-y-0">
-                {processedEvents.map((eventItem, index) => (
-                  <div key={index} className="relative pl-8 pb-4">
-                    {index < processedEvents.length - 1 ||
-                    (isLoading && index === processedEvents.length - 1) ? (
-                      <div className="absolute left-3 top-3.5 h-full w-0.5 bg-neutral-600" />
-                    ) : null}
-                    <div className="absolute left-0.5 top-2 h-6 w-6 rounded-full bg-neutral-600 flex items-center justify-center ring-4 ring-neutral-700">
-                      {getEventIcon(eventItem.title, index)}
-                    </div>
-                    <div>
-                      <p className="text-sm text-neutral-200 font-medium mb-0.5">
-                        {eventItem.title}
-                      </p>
-                      <p className="text-xs text-neutral-300 leading-relaxed">
-                        {typeof eventItem.data === "string"
-                          ? eventItem.data
-                          : Array.isArray(eventItem.data)
-                          ? (eventItem.data as string[]).join(", ")
-                          : JSON.stringify(eventItem.data)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {isLoading && processedEvents.length > 0 && (
-                  <div className="relative pl-8 pb-4">
-                    <div className="absolute left-0.5 top-2 h-5 w-5 rounded-full bg-neutral-600 flex items-center justify-center ring-4 ring-neutral-700">
-                      <Loader2 className="h-3 w-3 text-neutral-400 animate-spin" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-neutral-300 font-medium">
-                        Searching...
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : !isLoading ? ( // Only show "No activity" if not loading and no events
-              <div className="flex flex-col items-center justify-center h-full text-neutral-500 pt-10">
-                <Info className="h-6 w-6 mb-3" />
+            {!isLoading && processedEvents.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground pt-8 pb-4">
+                <Info className="h-5 w-5 mb-2" />
                 <p className="text-sm">No activity to display.</p>
-                <p className="text-xs text-neutral-600 mt-1">
+                <p className="text-xs mt-1">
                   Timeline will update during processing.
                 </p>
               </div>
-            ) : null}
+            )}
           </CardContent>
         </ScrollArea>
       )}

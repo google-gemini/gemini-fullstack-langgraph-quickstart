@@ -4,8 +4,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ProcessedEvent } from "@/components/ActivityTimeline";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessagesView } from "@/components/ChatMessagesView";
+import { ToastProvider, useToasts } from "@/contexts/ToastContext"; // Import ToastProvider and useToasts
 
-export default function App() {
+// InnerApp component to use useToasts hook
+const InnerApp = () => {
+  const { addToast } = useToasts(); // Now useToasts can be used here
   const [processedEventsTimeline, setProcessedEventsTimeline] = useState<
     ProcessedEvent[]
   >([]);
@@ -26,8 +29,16 @@ export default function App() {
       : "http://localhost:8123",
     assistantId: "agent",
     messagesKey: "messages",
-    onFinish: (event: any) => {
-      console.log(event);
+    onFinish: (_event: any) => { // Parameter can be ignored if not used
+      // console.log("Stream finished:", event); // Removed console.log
+    },
+    onError: (error: Error) => { // Add onError handler for stream errors
+      addToast({
+        message: `Stream error: ${error.message || 'An unexpected error occurred.'}`,
+        type: 'error',
+        duration: 7000, // Longer duration for important errors
+      });
+      console.error("Stream error:", error);
     },
     onUpdateEvent: (event: any) => {
       let processedEvent: ProcessedEvent | null = null;
@@ -150,10 +161,12 @@ export default function App() {
   const handleCancel = useCallback(() => {
     thread.stop();
     window.location.reload();
-  }, [thread]);
+  }, [thread, addToast]); // Added addToast to dependency array
 
   return (
-    <div className="flex h-screen bg-neutral-800 text-neutral-100 font-sans antialiased">
+    // This div is a good candidate to be the root for theming if not body
+    // The bg-neutral-800 and text-neutral-100 were old theme, will be overridden by global.css new theme
+    <div className="flex h-screen font-sans antialiased">
       <main className="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full">
         <div
           className={`flex-1 overflow-y-auto ${
@@ -180,5 +193,14 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+};
+
+// App component now wraps InnerApp with ToastProvider
+export default function App() {
+  return (
+    <ToastProvider>
+      <InnerApp />
+    </ToastProvider>
   );
 }
