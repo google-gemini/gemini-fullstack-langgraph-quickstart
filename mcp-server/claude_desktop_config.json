@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "gemini-research-agent": {
+      "command": "python",
+      "args": [
+        "/path/to/your/mcp-new/server.py"
+      ],
+      "env": {
+        "GEMINI_API_KEY": "your_actual_api_key_here"
+      }
+    }
+  }
+} 

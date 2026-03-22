@@ -1,0 +1,138 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with the Gemini Research Agent MCP Server
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out this form to help us understand and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Configure the server with...
+        2. Run the command...
+        3. Call the tool with parameters...
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: A clear and concise description of what actually happened.
+      placeholder: What actually happened?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort-level
+    attributes:
+      label: Effort Level
+      description: Which effort level were you using when the bug occurred?
+      options:
+        - Low (10 searches)
+        - Medium (100 searches)
+        - High (1000 searches)
+        - Not applicable
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      placeholder: e.g., macOS 14.0, Ubuntu 22.04, Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using?
+      placeholder: e.g., 3.11.5
+    validations:
+      required: true
+
+  - type: input
+    id: server-version
+    attributes:
+      label: MCP Server Version
+      description: What version of the Gemini Research Agent MCP Server are you using?
+      placeholder: e.g., 1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Please paste any relevant error messages or logs
+      placeholder: Paste error logs here...
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: Please share your configuration (remove any sensitive information)
+      placeholder: |
+        Environment variables (without API keys):
+        - LOG_LEVEL=INFO
+        - etc.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Screenshots, related issues, workarounds, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before submitting
+      options:
+        - label: I have searched for existing issues
+          required: true
+        - label: I have provided clear reproduction steps
+          required: true
+        - label: I have included relevant error logs
+          required: false
+        - label: I have removed any sensitive information (API keys, etc.)
+          required: true 

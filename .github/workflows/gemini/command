@@ -1,0 +1,6 @@
+/gemini <command>
+gemini-code-assist <command>.
+/gemini review
+/gemini summary
+@gemini-code-assist
+/gemini help
