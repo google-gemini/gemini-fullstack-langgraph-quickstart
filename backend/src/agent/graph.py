@@ -8,6 +8,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
 from google.genai import Client
+from tavily import TavilyClient
 
 from agent.state import (
     OverallState,
@@ -93,9 +94,10 @@ def continue_to_web_research(state: QueryGenerationState):
 
 
 def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
-    """LangGraph node that performs web research using the native Google Search API tool.
+    """LangGraph node that performs web research using Google Search or Tavily.
 
-    Executes a web search using the native Google Search API tool in combination with Gemini 2.0 Flash.
+    Executes a web search using the configured search provider. When search_provider
+    is 'tavily', uses the Tavily API; otherwise defaults to Google Search grounding.
 
     Args:
         state: Current graph state containing the search query and research loop count
@@ -104,8 +106,16 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     Returns:
         Dictionary with state update, including sources_gathered, research_loop_count, and web_research_results
     """
-    # Configure
     configurable = Configuration.from_runnable_config(config)
+
+    if configurable.search_provider == "tavily":
+        return _web_research_tavily(state, configurable)
+    else:
+        return _web_research_google(state, configurable)
+
+
+def _web_research_google(state: WebSearchState, configurable: Configuration) -> OverallState:
+    """Perform web research using Google Search grounding via Gemini."""
     formatted_prompt = web_searcher_instructions.format(
         current_date=get_current_date(),
         research_topic=state["search_query"],
@@ -128,6 +138,42 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     citations = get_citations(response, resolved_urls)
     modified_text = insert_citation_markers(response.text, citations)
     sources_gathered = [item for citation in citations for item in citation["segments"]]
+
+    return {
+        "sources_gathered": sources_gathered,
+        "search_query": [state["search_query"]],
+        "web_research_result": [modified_text],
+    }
+
+
+def _web_research_tavily(state: WebSearchState, configurable: Configuration) -> OverallState:
+    """Perform web research using the Tavily search API."""
+    tavily_client = TavilyClient()
+    response = tavily_client.search(
+        query=state["search_query"],
+        max_results=5,
+        search_depth="advanced",
+    )
+
+    # Build sources and research text matching the existing schema
+    sources_gathered = []
+    research_parts = []
+    for idx, result in enumerate(response.get("results", [])):
+        url = result.get("url", "")
+        title = result.get("title", "")
+        content = result.get("content", "")
+        short_url = f"https://tavily.com/id/{state['id']}-{idx}"
+
+        # label: use the domain or title
+        label = title.split(" - ")[0] if title else url
+        sources_gathered.append({
+            "label": label,
+            "short_url": short_url,
+            "value": url,
+        })
+        research_parts.append(f"{content} [{label}]({short_url})")
+
+    modified_text = "\n\n".join(research_parts) if research_parts else ""
 
     return {
         "sources_gathered": sources_gathered,

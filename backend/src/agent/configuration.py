@@ -29,6 +29,13 @@ class Configuration(BaseModel):
         },
     )
 
+    search_provider: str = Field(
+        default="google",
+        metadata={
+            "description": "The search provider to use for web research. Options: 'google' (default) or 'tavily'."
+        },
+    )
+
     number_of_initial_queries: int = Field(
         default=3,
         metadata={"description": "The number of initial search queries to generate."},
