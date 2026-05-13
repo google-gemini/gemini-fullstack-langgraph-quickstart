@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@langchain/core": "^0.3.55",
-    "@langchain/langgraph-sdk": "^0.0.74",
+    "@langchain/core": "^1.1.46",
+    "@langchain/langgraph-sdk": "^1.9.2",
     "@radix-ui/react-scroll-area": "^1.2.8",
     "@radix-ui/react-select": "^2.2.4",
     "@radix-ui/react-slot": "^1.2.2",
