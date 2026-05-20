@@ -38,9 +38,19 @@ Follow these steps to get the application running locally for development and te
 
 **Backend:**
 
+You can use either `pip` or `uv` to install the backend dependencies.
+
+Using `pip`:
 ```bash
 cd backend
 pip install .
+```
+
+Using `uv`:
+```bash
+cd backend
+uv venv
+uv pip install -p python .
 ```
 
 **Frontend:**

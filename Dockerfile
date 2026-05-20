@@ -35,6 +35,7 @@ COPY --from=frontend-builder /app/frontend/dist /deps/frontend/dist
 
 # -- Adding local package . --
 ADD backend/ /deps/backend
+ADD accounting_data.csv /deps/backend/accounting_data.csv
 # -- End of local package . --
 
 # -- Installing all local dependencies using UV --

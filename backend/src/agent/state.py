@@ -12,9 +12,18 @@ import operator
 
 class OverallState(TypedDict):
     messages: Annotated[list, add_messages]
+    task_queue: list # List of sub-tasks to be executed sequentially
+    current_step_index: int
+    current_worker: str
+    last_output: str # Output from the last step to be passed on
+    verification_passed: bool
+    error_feedback: str # Feedback from the Verifier if the task fails
+
     search_query: Annotated[list, operator.add]
     web_research_result: Annotated[list, operator.add]
     sources_gathered: Annotated[list, operator.add]
+    extracted_data: dict 
+    code_snippet: str 
     initial_search_query_count: int
     max_research_loops: int
     research_loop_count: int

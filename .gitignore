@@ -200,3 +200,5 @@ cython_debug/
 #.idea/
 
 backend/.langgraph_api
+.gemini/
+gha-creds-*.json

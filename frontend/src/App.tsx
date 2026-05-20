@@ -23,42 +23,31 @@ export default function App() {
     reasoning_model: string;
   }>({
     apiUrl: import.meta.env.DEV
-      ? "http://localhost:2024"
+      ? (window.location.port === "5173" ? "http://localhost:2024" : "http://localhost:8000")
       : "http://localhost:8123",
     assistantId: "agent",
     messagesKey: "messages",
     onUpdateEvent: (event: any) => {
       let processedEvent: ProcessedEvent | null = null;
-      if (event.generate_query) {
+      if (event.planner) {
         processedEvent = {
-          title: "Generating Search Queries",
-          data: event.generate_query?.search_query?.join(", ") || "",
+          title: "Planner",
+          data: "กำลังวางแผนและย่อยงานเป็นขั้นตอน...",
         };
-      } else if (event.web_research) {
-        const sources = event.web_research.sources_gathered || [];
-        const numSources = sources.length;
-        const uniqueLabels = [
-          ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
-        ];
-        const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
+      } else if (event.executor) {
+        const agentName = event.executor.active_agent || "Specialist";
         processedEvent = {
-          title: "Web Research",
-          data: `Gathered ${numSources} sources. Related to: ${
-            exampleLabels || "N/A"
-          }.`,
+          title: `Executor (${agentName})`,
+          data: `กำลังดำเนินการ: ${event.executor.last_output?.substring(0, 100)}...`,
         };
-      } else if (event.reflection) {
+      } else if (event.verifier) {
+        const isPassed = event.verifier.verification_passed;
         processedEvent = {
-          title: "Reflection",
-          data: "Analysing Web Research Results",
+          title: "Verifier",
+          data: isPassed ? "ตรวจสอบผ่านเรียบร้อย ✅" : `พบจุดที่ต้องแก้ไข: ${event.verifier.error_feedback?.substring(0, 50)}... ❌`,
         };
-      } else if (event.finalize_answer) {
-        processedEvent = {
-          title: "Finalizing Answer",
-          data: "Composing and presenting the final answer.",
-        };
-        hasFinalizeEventOccurredRef.current = true;
       }
+      
       if (processedEvent) {
         setProcessedEventsTimeline((prevEvents) => [
           ...prevEvents,
