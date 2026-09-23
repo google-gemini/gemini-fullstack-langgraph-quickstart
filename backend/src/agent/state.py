@@ -40,7 +40,7 @@ class QueryGenerationState(TypedDict):
 
 class WebSearchState(TypedDict):
     search_query: str
-    id: str
+    id: int
 
 
 @dataclass(kw_only=True)
