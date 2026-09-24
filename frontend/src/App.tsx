@@ -6,6 +6,15 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessagesView } from "@/components/ChatMessagesView";
 import { Button } from "@/components/ui/button";
 
+const getApiUrl = (): string => {
+  if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.trim() !== "") {
+    return import.meta.env.VITE_API_URL.trim();
+  }
+  return import.meta.env.DEV
+    ? "http://localhost:2024"
+    : window.location.origin;
+};
+
 export default function App() {
   const [processedEventsTimeline, setProcessedEventsTimeline] = useState<
     ProcessedEvent[]
@@ -22,9 +31,8 @@ export default function App() {
     max_research_loops: number;
     reasoning_model: string;
   }>({
-    apiUrl: import.meta.env.DEV
-      ? "http://localhost:2024"
-      : "http://localhost:8123",
+    apiUrl: getApiUrl(),
+
     assistantId: "agent",
     messagesKey: "messages",
     onUpdateEvent: (event: any) => {
