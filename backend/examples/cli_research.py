@@ -1,6 +1,4 @@
 import argparse
-from langchain_core.messages import HumanMessage
-from agent.graph import graph
 
 
 def main() -> None:
@@ -25,6 +23,9 @@ def main() -> None:
         help="Model for the final answer",
     )
     args = parser.parse_args()
+
+    from langchain_core.messages import HumanMessage
+    from agent.graph import graph
 
     state = {
         "messages": [HumanMessage(content=args.question)],
